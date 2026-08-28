@@ -329,6 +329,63 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }
 
+    let diffDiagHtml = '';
+    if (fullNode.differential_diagnosis && fullNode.differential_diagnosis.length > 0) {
+      diffDiagHtml = `
+        <div class="mt-4 p-4 rounded-xl bg-rose-950/25 border border-rose-500/35 space-y-2">
+          <h4 class="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+            <span>🔍</span> ملاک‌های تشخیص افتراقی (Differential Diagnosis):
+          </h4>
+          <div class="space-y-1.5 text-xs text-rose-100">
+            ${fullNode.differential_diagnosis.map(d => `
+              <div class="flex items-start gap-1.5 p-2 rounded bg-black/40 border border-rose-800/30">
+                <span class="text-rose-400 font-bold">•</span>
+                <div>${d}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    let diagCriteriaHtml = '';
+    if (fullNode.diagnostic_criteria && fullNode.diagnostic_criteria.length > 0) {
+      diagCriteriaHtml = `
+        <div class="mt-4 p-4 rounded-xl bg-indigo-950/25 border border-indigo-500/35 space-y-2">
+          <h4 class="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+            <span>📋</span> ملاک‌ها و ویژگی‌های تشخیصی (Diagnostic Features):
+          </h4>
+          <div class="space-y-1.5 text-xs text-indigo-100">
+            ${fullNode.diagnostic_criteria.map(c => `
+              <div class="flex items-start gap-1.5 p-2 rounded bg-black/40 border border-indigo-800/30">
+                <span class="text-indigo-400 font-bold">✔</span>
+                <div>${c}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    let examplesHtml = '';
+    if (fullNode.clinical_examples && fullNode.clinical_examples.length > 0) {
+      examplesHtml = `
+        <div class="mt-4 p-4 rounded-xl bg-amber-950/25 border border-amber-500/35 space-y-2">
+          <h4 class="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+            <span>💡</span> نمونه‌های عینی و مصادیق مطرح‌شده در کتاب (Clinical Examples):
+          </h4>
+          <div class="space-y-1.5 text-xs text-amber-100">
+            ${fullNode.clinical_examples.map(ex => `
+              <div class="flex items-start gap-1.5 p-2 rounded bg-black/40 border border-amber-800/30">
+                <span class="text-amber-400 font-bold">📌</span>
+                <div>${ex}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
     let tagsHtml = '';
     if (fullNode.tags && fullNode.tags.length > 0) {
       tagsHtml = `
@@ -406,6 +463,9 @@ document.addEventListener('DOMContentLoaded', () => {
           ${(fullNode.full_text || fullNode.summary || '').split('\n\n').map(p => `<p>${p.replace(/\n/g, '<br/>')}</p>`).join('')}
         </div>
 
+        ${diffDiagHtml}
+        ${diagCriteriaHtml}
+        ${examplesHtml}
         ${researchersHtml}
         ${pathwaysHtml}
         ${tagsHtml}
