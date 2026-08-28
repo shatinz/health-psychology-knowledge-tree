@@ -344,9 +344,12 @@ class FeynmanEngine {
     const inputArea = document.getElementById('feynman-user-input');
 
     if (this.speechRecognition && voiceBtn) {
+      let sessionBaseText = '';
+
       voiceBtn.onclick = () => {
         if (!this.isListening) {
           try {
+            sessionBaseText = inputArea.value.trim();
             this.speechRecognition.start();
             this.isListening = true;
             voiceBtn.classList.add('bg-rose-500/30', 'border-rose-500/50', 'text-rose-300', 'animate-pulse');
@@ -360,6 +363,7 @@ class FeynmanEngine {
             this.isListening = false;
             voiceBtn.classList.remove('bg-rose-500/30', 'border-rose-500/50', 'text-rose-300', 'animate-pulse');
             voiceLabel.textContent = 'ورود صوتی (فارسی)';
+            sessionBaseText = inputArea.value.trim();
           } catch (e) {
             console.error('Speech recognition stop failed:', e);
           }
@@ -367,11 +371,28 @@ class FeynmanEngine {
       };
 
       this.speechRecognition.onresult = (event) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          transcript += event.results[i][0].transcript;
+        let sessionFinal = '';
+        let sessionInterim = '';
+
+        for (let i = 0; i < event.results.length; ++i) {
+          const item = event.results[i];
+          const text = item[0].transcript.trim();
+          if (item.isFinal) {
+            sessionFinal += text + ' ';
+          } else {
+            sessionInterim += text + ' ';
+          }
         }
-        inputArea.value = (inputArea.value ? inputArea.value + ' ' : '') + transcript;
+
+        const parts = [sessionBaseText, sessionFinal.trim(), sessionInterim.trim()].filter(Boolean);
+        inputArea.value = parts.join(' ');
+      };
+
+      this.speechRecognition.onend = () => {
+        this.isListening = false;
+        voiceBtn.classList.remove('bg-rose-500/30', 'border-rose-500/50', 'text-rose-300', 'animate-pulse');
+        voiceLabel.textContent = 'ورود صوتی (فارسی)';
+        sessionBaseText = inputArea.value.trim();
       };
 
       this.speechRecognition.onerror = (e) => {
@@ -379,6 +400,7 @@ class FeynmanEngine {
         this.isListening = false;
         voiceBtn.classList.remove('bg-rose-500/30', 'border-rose-500/50', 'text-rose-300', 'animate-pulse');
         voiceLabel.textContent = 'ورود صوتی (فارسی)';
+        sessionBaseText = inputArea.value.trim();
       };
     } else if (voiceBtn) {
       voiceBtn.onclick = () => {
