@@ -211,8 +211,8 @@ class TheoristEngine {
     if (!n1 || !n2) return false;
     if (n1 === n2 || n1.includes(n2) || n2.includes(n1)) return true;
     
-    // Ignore common first names to prevent false collisions
-    const commonFirstNames = ['توماس', 'جان', 'آلفرد', 'ویلیام', 'رابرت', 'مایکل', 'دیوید', 'آرون', 'هانس', 'ادوارد', 'ژان', 'کارل', 'لوئیس', 'هنری'];
+    // Check key significant surname/identifier tokens
+    const commonFirstNames = ['توماس', 'جان', 'آلفرد', 'ویلیام', 'رابرت', 'مایکل', 'دیوید', 'آرون', 'هانس', 'ادوارد', 'ژان', 'کارل', 'لوئیس', 'هنری', 'مارتین'];
     const tokens1 = n1.split(' ').filter(t => t.length > 2 && !commonFirstNames.includes(t));
     const tokens2 = n2.split(' ').filter(t => t.length > 2 && !commonFirstNames.includes(t));
     return tokens1.length > 0 && tokens2.length > 0 && tokens1.some(t1 => tokens2.includes(t1));
@@ -238,24 +238,23 @@ class TheoristEngine {
       }
     }
 
+    const normOfficial = this.normalizeName(officialName);
+
     for (const node of allNodes) {
       let isMatch = false;
       if (node.researchers && Array.isArray(node.researchers)) {
         for (const res of node.researchers) {
-          if (this.nameMatches(res, theoristQuery) || (profile && this.nameMatches(res, officialName))) {
+          if (this.nameMatches(res, theoristQuery) || this.nameMatches(res, officialName)) {
             isMatch = true;
-            if (!officialName || officialName === theoristQuery) {
-              officialName = res;
-            }
             break;
           }
         }
       }
       
       if (!isMatch) {
-        // Also check if theorist name is mentioned in node full text or title
+        // Check if theorist name or key surname is mentioned in full text with word boundary
         const fullText = this.normalizeName((node.title || '') + ' ' + (node.full_text || '') + ' ' + (node.summary || ''));
-        if (this.nameMatches(fullText, normQuery) || (profile && this.nameMatches(fullText, officialName))) {
+        if (fullText.includes(normQuery) || (normOfficial && fullText.includes(normOfficial))) {
           isMatch = true;
         }
       }

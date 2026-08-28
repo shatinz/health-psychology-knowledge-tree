@@ -175,45 +175,49 @@ def parse_page_blocks(page_text):
         
     return [it for it in items if it['text']]
 
-KNOWN_RESEARCHERS = [
-    ("توماس فیر", "توماس فیر (Thomas Phaer)"),
-    ("بنیامین راش", "بنیامین راش (Benjamin Rush)"),
-    ("استنلی هال", "استنلی هال (G. Stanley Hall)"),
-    ("آلفرد بینه", "آلفرد بینه (Alfred Binet)"),
-    ("لوئیس ترمن", "لوئیس ترمن (Lewis Terman)"),
-    ("ویتمر", "لایتنر ویتمر (Lightner Witmer)"),
-    ("ویلیام هلی", "ویلیام هلی (William Healy)"),
-    ("آدولف مایر", "آدولف مایر (Adolf Meyer)"),
-    ("ادوارد سکواین", "ادوارد سگوین (Édouard Séguin)"),
-    ("فروید", "زیگموند فروید (Sigmund Freud)"),
-    ("آدلر", "آلفرد آدلر (Alfred Adler)"),
-    ("هورنای", "کارن هورنای (Karen Horney)"),
-    ("دالارد", "جان دالارد و نیل میلر (Dollard & Miller)"),
-    ("میلر", "جان دالارد و نیل میلر (Dollard & Miller)"),
-    ("بندورا", "آلبرت بندورا (Albert Bandura)"),
-    ("راتر", "جولیان راتر (Julian Rotter)"),
-    ("الیس", "آلبرت الیس (Albert Ellis)"),
-    ("آنا فروید", "آنا فروید (Anna Freud)"),
-    ("ایکن باخ", "توماس ایکن‌باخ (Thomas Achenbach)"),
-    ("پیاژه", "ژان پیاژه (Jean Piaget)"),
-    ("هلر", "تئودور هلر (Theodor Heller)"),
-    ("آسپرگر", "هانس آسپرگر (Hans Asperger)"),
-    ("کانر", "لئو کانر (Leo Kanner)"),
-    ("رت", "آندریاس رت (Andreas Rett)"),
-    ("لاک", "جان لاک (John Locke)"),
-    ("روسو", "ژان ژاک روسو (Jean-Jacques Rousseau)"),
-    ("لورنز", "کنراد لورنز (Konrad Lorenz)"),
-    ("هارلو", "هری هارلو (Harry Harlow)"),
-    ("بالبی", "جان بالبی (John Bowlby)"),
-    ("سلیکمن", "مارتین سلیگمن (Martin Seligman)"),
-    ("بک", "آرون بک (Aaron Beck)")
+STRICT_RESEARCHERS = [
+    (r'\bتوماس\s+فیر\b', 'توماس فیر (Thomas Phaer)'),
+    (r'\bبنیامین\s+راش\b', 'بنیامین راش (Benjamin Rush)'),
+    (r'\b(استنلی\s+هال|استنلی‌هال)\b', 'استنلی هال (G. Stanley Hall)'),
+    (r'\bآلفرد\s+بینه\b', 'آلفرد بینه (Alfred Binet)'),
+    (r'\bلوئیس\s+ترمن\b', 'لوئیس ترمن (Lewis Terman)'),
+    (r'\b(لایتنر\s+ویتمر|ویتمر)\b', 'لایتنر ویتمر (Lightner Witmer)'),
+    (r'\bویلیام\s+هلی\b', 'ویلیام هلی (William Healy)'),
+    (r'\bآدولف\s+مایر\b', 'آدولف مایر (Adolf Meyer)'),
+    (r'\b(ادوارد\s+سکواین|ادوارد\s+سگوین|سگوین)\b', 'ادوارد سگوین (Édouard Séguin)'),
+    (r'\bآنا\s+فروید\b', 'آنا فروید (Anna Freud)'),
+    (r'\b(زیگموند\s+فروید|فروید)\b', 'زیگموند فروید (Sigmund Freud)'),
+    (r'\b(آلفرد\s+آدلر|آدلر)\b', 'آلفرد آدلر (Alfred Adler)'),
+    (r'\b(کارن\s+هورنای|هورنای)\b', 'کارن هورنای (Karen Horney)'),
+    (r'\b(دالارد\s+و\s+میلر|دالارد)\b', 'جان دالارد و نیل میلر (Dollard & Miller)'),
+    (r'\b(آلبرت\s+بندورا|بندورا)\b', 'آلبرت بندورا (Albert Bandura)'),
+    (r'\b(جولیان\s+راتر|راتر)\b', 'جولیان راتر (Julian Rotter)'),
+    (r'\bآلبرت\s+الیس\b', 'آلبرت الیس (Albert Ellis)'),
+    (r'\b(توماس\s+ایکن‌باخ|توماس\s+ایکن\s+باخ|ایکن‌باخ|ایکن\s+باخ)\b', 'توماس ایکن‌باخ (Thomas Achenbach)'),
+    (r'\b(ژان\s+پیاژه|پیاژه)\b', 'ژان پیاژه (Jean Piaget)'),
+    (r'\b(تئودور\s+هلر|سندروم\s+هلر|سندرم\s+هلر)\b', 'تئودور هلر (Theodor Heller)'),
+    (r'\b(هانس\s+آسپرگر|سندروم\s+آسپرگر|سندرم\s+آسپرگر|آسپرگر)\b', 'هانس آسپرگر (Hans Asperger)'),
+    (r'\b(لئو\s+کانر|کانر)\b', 'لئو کانر (Leo Kanner)'),
+    (r'\b(آندریاس\s+رت|سندروم\s+رت|سندرم\s+رت|اختلال\s+رت)\b', 'آندریاس رت (Andreas Rett)'),
+    (r'\bجان\s+لاک\b', 'جان لاک (John Locke)'),
+    (r'\b(ژان\s+ژاک\s+روسو|روسو)\b', 'ژان ژاک روسو (Jean-Jacques Rousseau)'),
+    (r'\b(مارتین\s+سلیگمن|سلیگمن)\b', 'مارتین سلیگمن (Martin Seligman)'),
+    (r'\bآرون\s+بک\b', 'آرون بک (Aaron Beck)'),
+    (r'\b(هیلدا\s+بروچ|بروچ)\b', 'هیلدا بروچ (Hilde Bruch)')
 ]
 
 def extract_node_meta(text):
     researchers = []
-    for k, v in KNOWN_RESEARCHERS:
-        if k in text and v not in researchers:
-            researchers.append(v)
+    has_anna = bool(re.search(r'\bآنا\s+فروید\b', text))
+    
+    for pattern, name in STRICT_RESEARCHERS:
+        if name == 'زیگموند فروید (Sigmund Freud)' and has_anna:
+            # If Anna Freud is present, only add Sigmund if explicitly mentioned
+            if not re.search(r'\bزیگموند\s+فروید\b', text) and not re.search(r'(?<!آنا\s)فروید', text):
+                continue
+        if re.search(pattern, text):
+            if name not in researchers:
+                researchers.append(name)
             
     tags = []
     if "تشخیص افتراقی" in text or "متمایز" in text or "افتراق" in text:
