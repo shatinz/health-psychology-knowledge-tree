@@ -216,6 +216,12 @@ document.addEventListener('DOMContentLoaded', () => {
   viewQuizBtn?.addEventListener('click', () => switchView('quiz'));
   viewDocHubBtn?.addEventListener('click', () => switchView('doc_hub'));
 
+  const btnToggleExamMode = document.getElementById('btn-toggle-exam-mode');
+  btnToggleExamMode?.addEventListener('click', () => {
+    quizEngine.toggleExamMode();
+  });
+  quizEngine.updateExamModeButtonUI();
+
   docSelector?.addEventListener('change', (e) => {
     docManager.setActiveDocument(e.target.value);
     updateHUD();
@@ -459,6 +465,43 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }
 
+    const isMastered = quizEngine.isNodeMastered(fullNode.id);
+    const isExamMode = quizEngine.isExamModeActive;
+
+    let masteryAlertHtml = '';
+    if (isMastered) {
+      masteryAlertHtml = `
+        <div class="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 text-xs text-emerald-300">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🏆</span>
+            <div>
+              <div class="font-bold text-white">تسلط کامل احراز شده (۹۰٪+)</div>
+              <div class="text-[11px] text-emerald-400">شما با موفقیت آزمون این شاخه را با نمره عالی پشت سر گذاشته‌اید.</div>
+            </div>
+          </div>
+          <button onclick="window.omniApp.startQuizForNode('${fullNode.id}')" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-500/40 text-[11px] font-semibold transition cursor-pointer">
+            تکرار آزمون
+          </button>
+        </div>
+      `;
+    } else if (isExamMode) {
+      masteryAlertHtml = `
+        <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/40 space-y-2.5 text-xs">
+          <div class="flex items-center gap-2 text-amber-300 font-bold">
+            <span class="text-base">🔒</span>
+            <span>حالت چالش تسلط ۹۰٪ فعال است</span>
+          </div>
+          <p class="text-slate-300 text-xs leading-relaxed text-justify">
+            برای خروج از این شاخه و باز شدن سایر مباحث، باید در آزمون تسلط این بخش حداقل <b>۹۰٪ پاسخ صحیح</b> کسب نمایید.
+          </p>
+          <button onclick="window.omniApp.startQuizForNode('${fullNode.id}')" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2 cursor-pointer">
+            <span>🎯</span>
+            <span>شروع آزمون چالش ۹۰٪ این شاخه</span>
+          </button>
+        </div>
+      `;
+    }
+
     inspectorContent.innerHTML = `
       <div class="p-5 space-y-4">
         <div class="border-b border-gray-800 pb-3">
@@ -469,13 +512,14 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="text-xs text-gray-400 font-mono">${fullNode.type}</span>
             ${fullNode.page ? `<span class="badge bg-slate-800 text-slate-300 border border-slate-700">📄 صفحه ${fullNode.page} کتاب</span>` : ''}
             ${fullNode.pages ? `<span class="badge bg-slate-800 text-slate-300 border border-slate-700">📄 ${fullNode.pages}</span>` : ''}
+            ${fullNode.exam_weight ? `<span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40">ضریب پیش‌بینی: ${fullNode.exam_weight === 'high' ? '🔴 بالا (ضریب ۳)' : (fullNode.exam_weight === 'medium' ? '🟠 متوسط (ضریب ۲)' : '🟡 استاندارد')} - احتمال ${fullNode.forecast_probability || 80}٪</span>` : ''}
           </div>
           <h2 class="text-lg font-bold text-white leading-snug">${fullNode.title}</h2>
           ${fullNode.parentTitle ? `<p class="text-xs text-gray-400 mt-1">شاخه والد: ${fullNode.parentTitle}</p>` : ''}
           <div class="flex items-center gap-2 mt-3 pt-2 border-t border-white/5 flex-wrap">
-            <button onclick="window.omniApp.startQuizForNode('${fullNode.id}')" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow transition flex items-center gap-1.5 cursor-pointer">
-              <span>📝</span>
-              <span>آزمون و تست از این مبحث</span>
+            <button onclick="window.omniApp.startQuizForNode('${fullNode.id}')" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white text-xs font-bold shadow transition flex items-center gap-1.5 cursor-pointer">
+              <span>🎯</span>
+              <span>آزمون تسلط ۹۰٪ این مبحث</span>
             </button>
             <button onclick="window.omniApp.navigateToNode('${fullNode.id}')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition flex items-center gap-1.5 cursor-pointer">
               <span>🌲</span>
@@ -483,6 +527,8 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
           </div>
         </div>
+
+        ${masteryAlertHtml}
 
         <div class="prose prose-invert max-w-none text-sm text-gray-200 leading-relaxed space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
           <div class="text-xs font-semibold text-cyan-400 mb-1 flex items-center gap-1">
@@ -932,6 +978,7 @@ document.addEventListener('DOMContentLoaded', () => {
       switchView('tree');
     },
     quizEngine: quizEngine,
+    treeRenderer: treeRenderer,
     startQuizForNode: (nodeId) => {
       closeInspector();
       switchView('quiz');

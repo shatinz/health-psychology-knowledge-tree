@@ -110,12 +110,66 @@ class TreeRenderer {
 
     if (node.page) {
       const pageBadge = document.createElement("span");
-      pageBadge.className = "badge badge-page";
-      pageBadge.style.backgroundColor = "rgba(100, 116, 139, 0.2)";
-      pageBadge.style.borderColor = "rgba(100, 116, 139, 0.4)";
-      pageBadge.style.color = "#94a3b8";
+      pageBadge.className = "badge";
+      pageBadge.style.background = "rgba(100, 116, 139, 0.2)";
+      pageBadge.style.color = "#cbd5e1";
+      pageBadge.style.border = "1px solid rgba(100, 116, 139, 0.4)";
       pageBadge.textContent = `📄 ص ${node.page}`;
       badgeContainer.appendChild(pageBadge);
+    }
+
+    if (node.pages) {
+      const pagesBadge = document.createElement("span");
+      pagesBadge.className = "badge";
+      pagesBadge.style.background = "rgba(100, 116, 139, 0.2)";
+      pagesBadge.style.color = "#cbd5e1";
+      pagesBadge.style.border = "1px solid rgba(100, 116, 139, 0.4)";
+      pagesBadge.textContent = `📄 ${node.pages}`;
+      badgeContainer.appendChild(pagesBadge);
+    }
+
+    // Exam Forecast Weight Badge
+    if (node.exam_weight) {
+      const weightBadge = document.createElement("span");
+      weightBadge.className = "badge";
+      if (node.exam_weight === 'high') {
+        weightBadge.style.background = "rgba(244, 63, 94, 0.15)";
+        weightBadge.style.color = "#fda4af";
+        weightBadge.style.border = "1px solid rgba(244, 63, 94, 0.35)";
+        weightBadge.textContent = `🔴 ضریب ۳ (${node.forecast_probability || 90}٪)`;
+      } else if (node.exam_weight === 'medium') {
+        weightBadge.style.background = "rgba(245, 158, 11, 0.15)";
+        weightBadge.style.color = "#fcd34d";
+        weightBadge.style.border = "1px solid rgba(245, 158, 11, 0.35)";
+        weightBadge.textContent = `🟠 ضریب ۲ (${node.forecast_probability || 75}٪)`;
+      } else {
+        weightBadge.style.background = "rgba(234, 179, 8, 0.15)";
+        weightBadge.style.color = "#fef08a";
+        weightBadge.style.border = "1px solid rgba(234, 179, 8, 0.35)";
+        weightBadge.textContent = `🟡 ضریب ۱ (${node.forecast_probability || 60}٪)`;
+      }
+      badgeContainer.appendChild(weightBadge);
+    }
+
+    // Mastery Badge (90%+)
+    if (window.omniApp && window.omniApp.quizEngine) {
+      if (window.omniApp.quizEngine.isNodeMastered(node.id)) {
+        const masterBadge = document.createElement("span");
+        masterBadge.className = "badge";
+        masterBadge.style.background = "rgba(16, 185, 129, 0.2)";
+        masterBadge.style.color = "#6ee7b7";
+        masterBadge.style.border = "1px solid rgba(16, 185, 129, 0.4)";
+        masterBadge.textContent = "🏆 مسلط‌شده (۹۰٪+)";
+        badgeContainer.appendChild(masterBadge);
+      } else if (window.omniApp.quizEngine.isExamModeActive && (node.type === 'section' || node.exam_weight)) {
+        const lockBadge = document.createElement("span");
+        lockBadge.className = "badge";
+        lockBadge.style.background = "rgba(245, 158, 11, 0.2)";
+        lockBadge.style.color = "#fbbf24";
+        lockBadge.style.border = "1px solid rgba(245, 158, 11, 0.4)";
+        lockBadge.textContent = "🔒 نیازمند آزمون ۹۰٪";
+        badgeContainer.appendChild(lockBadge);
+      }
     }
 
     if (hasChildren) {

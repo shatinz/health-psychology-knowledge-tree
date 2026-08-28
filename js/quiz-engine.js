@@ -1,7 +1,7 @@
 /**
  * Interactive Exam & Quiz Intelligence Engine (Quiz Studio)
  * Provides comprehensive testing, timed exams, instant grading, performance analytics,
- * explanatory answers, and direct jump links into the Knowledge Tree.
+ * explanatory answers, 90% Mastery Lock Challenges, and direct jump links into the Knowledge Tree.
  */
 
 class QuizEngine {
@@ -10,8 +10,10 @@ class QuizEngine {
     this.onNavigateToNode = onNavigateToNode;
     this.questionBank = window.QUIZ_QUESTION_BANK || [];
     
-    // Load custom questions from localStorage if available
+    // Load custom questions & mastery records from localStorage
     this.loadCustomQuestions();
+    this.masteryRecords = this.loadMasteryRecords();
+    this.isExamModeActive = localStorage.getItem('omni_exam_mode_active') === 'true';
 
     this.state = {
       view: 'home', // 'home' | 'active' | 'result'
@@ -22,8 +24,58 @@ class QuizEngine {
       flagged: new Set(),
       timerSeconds: 0,
       timerInterval: null,
-      timeSpentSeconds: 0
+      timeSpentSeconds: 0,
+      isMasteryChallenge: false,
+      targetMasteryNodeId: null,
+      requiredMasteryPercent: 90
     };
+  }
+
+  loadMasteryRecords() {
+    try {
+      const saved = localStorage.getItem('omni_node_mastery');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      console.warn('Failed to load node mastery from localStorage:', e);
+      return {};
+    }
+  }
+
+  saveMasteryRecords() {
+    try {
+      localStorage.setItem('omni_node_mastery', JSON.stringify(this.masteryRecords));
+    } catch (e) {
+      console.error('Failed to save mastery records:', e);
+    }
+  }
+
+  isNodeMastered(nodeId) {
+    return !!(this.masteryRecords[nodeId] && this.masteryRecords[nodeId].passed);
+  }
+
+  toggleExamMode() {
+    this.isExamModeActive = !this.isExamModeActive;
+    localStorage.setItem('omni_exam_mode_active', this.isExamModeActive.toString());
+    this.updateExamModeButtonUI();
+    if (window.omniApp && window.omniApp.treeRenderer) {
+      window.omniApp.treeRenderer.render();
+    }
+    return this.isExamModeActive;
+  }
+
+  updateExamModeButtonUI() {
+    const btn = document.getElementById('btn-toggle-exam-mode');
+    if (btn) {
+      if (this.isExamModeActive) {
+        btn.classList.add('bg-amber-500', 'text-slate-950', 'font-bold', 'shadow-lg', 'shadow-amber-500/30');
+        btn.classList.remove('bg-amber-500/10', 'text-amber-400');
+        btn.innerHTML = `<span>🔒</span><span>چالش ۹۰٪: فعال</span>`;
+      } else {
+        btn.classList.remove('bg-amber-500', 'text-slate-950', 'font-bold', 'shadow-lg', 'shadow-amber-500/30');
+        btn.classList.add('bg-amber-500/10', 'text-amber-400');
+        btn.innerHTML = `<span>🔓</span><span>چالش ۹۰٪: غیرفعال</span>`;
+      }
+    }
   }
 
   loadCustomQuestions() {
@@ -57,7 +109,7 @@ class QuizEngine {
    */
   startComprehensiveQuiz() {
     const shuffled = [...this.questionBank].sort(() => Math.random() - 0.5);
-    this.initQuiz('آزمون جامع و شبیه‌ساز کنکور و امتحانات تخصصی', shuffled, 30 * 60); // 30 mins
+    this.initQuiz('آزمون جامع و شبیه‌ساز کنکور و امتحانات تخصصی', shuffled, 30 * 60, false, null);
   }
 
   /**
@@ -66,7 +118,7 @@ class QuizEngine {
   startDocQuiz(docId, docTitle) {
     const filtered = this.questionBank.filter(q => q.docId === docId);
     const questions = filtered.length > 0 ? filtered : this.questionBank;
-    this.initQuiz(`آزمون تخصصی ${docTitle}`, questions, Math.max(10, questions.length * 90));
+    this.initQuiz(`آزمون تخصصی ${docTitle}`, questions, Math.max(10, questions.length * 90), false, null);
   }
 
   /**
@@ -75,31 +127,75 @@ class QuizEngine {
   startChapterQuiz(chapterId, chapterTitle) {
     const filtered = this.questionBank.filter(q => q.chapterId === chapterId);
     if (filtered.length === 0) {
-      // If no pre-authored questions exist for this chapter, create dynamic questions from chapter points
       const dynamicQs = this.generateDynamicQuestionsForChapter(chapterId, chapterTitle);
-      this.initQuiz(`آزمون فصلی: ${chapterTitle}`, dynamicQs, dynamicQs.length * 90);
+      this.initQuiz(`آزمون فصلی: ${chapterTitle}`, dynamicQs, dynamicQs.length * 90, false, null);
       return;
     }
-    this.initQuiz(`آزمون فصلی: ${chapterTitle}`, filtered, filtered.length * 90);
+    this.initQuiz(`آزمون فصلی: ${chapterTitle}`, filtered, filtered.length * 90, false, null);
   }
 
   /**
-   * Starts a quick 3-5 question quiz for a specific tree node
+   * Starts a 90% Mastery Challenge for a specific branch node
    */
-  startQuickQuizForNode(nodeId) {
+  startMasteryChallengeForNode(nodeId) {
     const node = this.docManager.nodeIndex.get(nodeId);
     if (!node) return;
 
-    // Find direct matching questions or in the same chapter
-    let matched = this.questionBank.filter(q => q.nodeId === nodeId);
-    if (matched.length === 0 && node.chapterId) {
-      matched = this.questionBank.filter(q => q.chapterId === node.chapterId);
+    // Calculate required question count based on weight
+    const count = node.required_quiz_count || (node.exam_weight === 'high' ? 8 : (node.exam_weight === 'medium' ? 5 : 3));
+    
+    // Find pre-authored questions + generate dynamic questions from detailed_points
+    let matched = this.questionBank.filter(q => q.nodeId === nodeId || q.chapterId === node.id || q.chapterId === node.chapterId);
+    
+    if (matched.length < count && node.detailed_points && node.detailed_points.length > 0) {
+      const dynamicQs = this.generateDynamicQuestionsFromDetailedPoints(node, count - matched.length);
+      matched = [...matched, ...dynamicQs];
     }
+    
     if (matched.length === 0) {
       matched = this.generateDynamicQuestionsForNode(node);
     }
 
-    this.initQuiz(`کوییز سریع: ${node.title}`, matched.slice(0, 5), Math.max(5, matched.length) * 90);
+    const finalQuestions = matched.slice(0, count);
+    this.initQuiz(`چالش تسلط ۹۰٪: ${node.title}`, finalQuestions, finalQuestions.length * 90, true, nodeId, 90);
+  }
+
+  startQuickQuizForNode(nodeId) {
+    this.startMasteryChallengeForNode(nodeId);
+  }
+
+  generateDynamicQuestionsFromDetailedPoints(node, countNeeded) {
+    const points = node.detailed_points || [];
+    if (points.length === 0) return [];
+    
+    const shuffledPoints = [...points].sort(() => Math.random() - 0.5);
+    const qs = [];
+
+    shuffledPoints.slice(0, countNeeded).forEach((p, idx) => {
+      const pText = p.text.replace(/^[•\-\d\.\:\s]+/, '').trim();
+      if (pText.length < 25) return;
+
+      qs.push({
+        id: `dyn_pt_${node.id}_${idx}_${Date.now()}`,
+        docId: node.docId,
+        chapterId: node.chapterId || node.id,
+        chapterTitle: node.title,
+        nodeId: node.id,
+        page: p.page || node.page || 1,
+        difficulty: node.exam_weight === 'high' ? 'سخت' : 'متوسط',
+        question: `بر اساس مبحث «${node.title}» (ص ${p.page || node.page || 1})، کدام عبارت صحیح است؟`,
+        options: [
+          pText.length > 160 ? pText.substring(0, 150) + '...' : pText,
+          "این خصیصه صرفاً یک نشانه گذرا بوده و در معاینه بالینی مدنظر قرار نمی‌گیرد.",
+          "نشانه‌های فوق بر اساس راهنمای DSM نیازمند درمان بستری اجباری هستند.",
+          "این حالت هیچ‌گونه زیربنای رشدی، شناختی یا زیست‌شناختی ندارد."
+        ],
+        correctIndex: 0,
+        explanation: `متن دقیق مرجع کتاب (ص ${p.page || node.page || 1}): «${pText}»`
+      });
+    });
+
+    return qs;
   }
 
   generateDynamicQuestionsForNode(node) {
@@ -108,7 +204,7 @@ class QuizEngine {
       id: `dyn_${node.id}_1`,
       docId: node.docId,
       chapterId: node.chapterId || node.id,
-      chapterTitle: node.parentTitle || node.title,
+      chapterTitle: node.title,
       nodeId: node.id,
       page: node.page || 1,
       difficulty: "متوسط",
@@ -153,7 +249,7 @@ class QuizEngine {
     return qs.length > 0 ? qs : this.questionBank.slice(0, 5);
   }
 
-  initQuiz(title, questions, durationSeconds = 1800) {
+  initQuiz(title, questions, durationSeconds = 1800, isMastery = false, targetNodeId = null, requiredPercent = 90) {
     if (!questions || questions.length === 0) {
       alert("سوالی برای این آزمون یافت نشد.");
       return;
@@ -172,7 +268,10 @@ class QuizEngine {
       flagged: new Set(),
       timerSeconds: durationSeconds,
       timeSpentSeconds: 0,
-      timerInterval: null
+      timerInterval: null,
+      isMasteryChallenge: isMastery,
+      targetMasteryNodeId: targetNodeId,
+      requiredMasteryPercent: requiredPercent
     };
 
     // Start countdown timer
@@ -234,7 +333,7 @@ class QuizEngine {
       const answeredCount = Object.keys(this.state.userAnswers).length;
       const total = this.state.questions.length;
       if (answeredCount < total) {
-        if (!confirm(`شما به ${answeredCount} سوال از ${total} سوال پاسخ داده‌اید. آیا از ثبت نهایی و پایان آزمون اطمینان دارید؟`)) {
+        if (!confirm(`شما به ${answeredCount} سوال از ${total} سوال پاسخ داده‌اید. آیا از ثبت نهایی اطمینان دارید؟`)) {
           return;
         }
       }
@@ -243,6 +342,22 @@ class QuizEngine {
     if (this.state.timerInterval) {
       clearInterval(this.state.timerInterval);
       this.state.timerInterval = null;
+    }
+
+    // Process Mastery Challenge Results if applicable
+    if (this.state.isMasteryChallenge && this.state.targetMasteryNodeId) {
+      const res = this.calculateResults();
+      if (res.percentage >= this.state.requiredMasteryPercent) {
+        this.masteryRecords[this.state.targetMasteryNodeId] = {
+          passed: true,
+          score: res.percentage,
+          timestamp: Date.now()
+        };
+        this.saveMasteryRecords();
+        if (window.omniApp && window.omniApp.treeRenderer) {
+          window.omniApp.treeRenderer.render();
+        }
+      }
     }
 
     this.state.view = 'result';
@@ -331,6 +446,7 @@ class QuizEngine {
     });
 
     const chapters = Array.from(chaptersMap.values());
+    const totalMastered = Object.values(this.masteryRecords).filter(r => r.passed).length;
 
     container.innerHTML = `
       <div class="max-w-6xl mx-auto p-6 space-y-8">
@@ -344,17 +460,19 @@ class QuizEngine {
                 <span>استودیوی آزمون و سنجش هوشمند</span>
               </div>
               <h2 class="text-2xl md:text-3xl font-extrabold text-white tracking-tight leading-tight">
-                سامانه آزمون‌های تخصصی، کنکور و تست‌های چهارگزینه‌ای
+                سامانه آزمون‌های تخصصی، کنکور و شبیه‌ساز تسلط ۹۰٪
               </h2>
               <p class="text-sm text-slate-300 mt-2 max-w-2xl leading-relaxed">
-                آزمون‌های جامع و فصلی همراه با کارنامه هوشمند، پاسخ تشریحی کامل، و قابلیت پرش مستقیم از هر سوال به گره و صفحه متناظر در درخت دانش.
+                آزمون‌های جامع و فصلی همراه با کارنامه هوشمند، شرط تسلط ۹۰٪ برای گشودن شاخه‌ها، و محاسبه ضرایب احتمال آزمون (Exam Forecast).
               </p>
             </div>
             
-            <button onclick="window.omniApp.quizEngine.startComprehensiveQuiz()" class="px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-sm shadow-xl shadow-cyan-500/25 transition transform hover:scale-[1.02] flex items-center gap-2 cursor-pointer whitespace-nowrap">
-              <span>🚀</span>
-              <span>شروع آزمون جامع ۳۰ سوالی</span>
-            </button>
+            <div class="flex flex-col sm:flex-row gap-3 shrink-0">
+              <button onclick="window.omniApp.quizEngine.startComprehensiveQuiz()" class="px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-sm shadow-xl shadow-cyan-500/25 transition transform hover:scale-[1.02] flex items-center gap-2 cursor-pointer whitespace-nowrap">
+                <span>🚀</span>
+                <span>شروع آزمون جامع ۳۰ سوالی</span>
+              </button>
+            </div>
           </div>
 
           <!-- Quick Stats Bar -->
@@ -364,16 +482,18 @@ class QuizEngine {
               <div class="text-xl font-bold text-cyan-400 mt-1">${totalQuestions} تست استاندارد</div>
             </div>
             <div class="bg-black/30 p-3.5 rounded-xl border border-white/5">
-              <span class="text-xs text-slate-400">پوشش فصول</span>
-              <div class="text-xl font-bold text-purple-400 mt-1">${chapters.length} سرفصل تخصصی</div>
+              <span class="text-xs text-slate-400">شاخه‌های مسلط‌شده (۹۰٪+)</span>
+              <div class="text-xl font-bold text-emerald-400 mt-1">${totalMastered} شاخه 🏆</div>
             </div>
             <div class="bg-black/30 p-3.5 rounded-xl border border-white/5">
-              <span class="text-xs text-slate-400">پاسخ تشریحی</span>
-              <div class="text-xl font-bold text-emerald-400 mt-1">۱۰۰٪ همراه با ارجاع</div>
+              <span class="text-xs text-slate-400">حالت چالش ۹۰٪</span>
+              <div class="text-xl font-bold ${this.isExamModeActive ? 'text-amber-400' : 'text-slate-400'} mt-1">
+                ${this.isExamModeActive ? '🔒 فعال' : '🔓 غیرفعال'}
+              </div>
             </div>
             <div class="bg-black/30 p-3.5 rounded-xl border border-white/5">
-              <span class="text-xs text-slate-400">شبیه‌ساز هوشمند</span>
-              <div class="text-xl font-bold text-amber-400 mt-1">زمان‌دار + کارنامه</div>
+              <span class="text-xs text-slate-400">الگوریتم پیش‌بینی</span>
+              <div class="text-xl font-bold text-purple-400 mt-1">وزن‌دهی Exam-Forecast</div>
             </div>
           </div>
         </div>
@@ -465,14 +585,17 @@ class QuizEngine {
     container.innerHTML = `
       <div class="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
         <!-- Quiz HUD Header -->
-        <div class="glass-panel p-4 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-4 bg-slate-950/80">
+        <div class="glass-panel p-4 rounded-2xl border ${this.state.isMasteryChallenge ? 'border-amber-500/50 bg-amber-950/30' : 'border-white/10 bg-slate-950/80'} flex flex-wrap items-center justify-between gap-4">
           <div class="flex items-center gap-3">
-            <button onclick="window.omniApp.quizEngine.state.view='home'; window.omniApp.quizEngine.render();" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition cursor-pointer" title="خروج به صفحه آزمون‌ها">
+            <button onclick="window.omniApp.quizEngine.cancelQuiz()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition cursor-pointer" title="انصراف">
               ✕ انصراف
             </button>
             <div>
-              <h3 class="text-sm font-bold text-white">${this.state.activeQuizTitle}</h3>
-              <p class="text-xs text-slate-400">سوال ${this.state.currentIndex + 1} از ${total}</p>
+              <div class="flex items-center gap-2">
+                ${this.state.isMasteryChallenge ? `<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold">🔒 چالش تسلط ۹۰٪</span>` : ''}
+                <h3 class="text-sm font-bold text-white">${this.state.activeQuizTitle}</h3>
+              </div>
+              <p class="text-xs text-slate-400">سوال ${this.state.currentIndex + 1} از ${total} ${this.state.isMasteryChallenge ? '(شرط قبولی: حداقل ۹۰٪ پاسخ درست)' : ''}</p>
             </div>
           </div>
 
@@ -584,7 +707,7 @@ class QuizEngine {
               </div>
               <div class="flex items-center gap-1.5">
                 <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
-                <span>نشان‌گذاری‌شده برای بررسی</span>
+                <span>نشان‌گذاری‌شده</span>
               </div>
               <div class="flex items-center gap-1.5">
                 <span class="w-2.5 h-2.5 rounded-full bg-slate-700 inline-block"></span>
@@ -597,15 +720,30 @@ class QuizEngine {
     `;
   }
 
+  cancelQuiz() {
+    if (this.state.isMasteryChallenge && this.isExamModeActive) {
+      if (!confirm("در حالت چالش ۹۰٪، تا زمان پاسخگویی به سوالات نمی‌توانید شاخه را باز کنید. آیا قصد خروج دارید؟")) {
+        return;
+      }
+    }
+    if (this.state.timerInterval) {
+      clearInterval(this.state.timerInterval);
+      this.state.timerInterval = null;
+    }
+    this.state.view = 'home';
+    this.render();
+  }
+
   // --- 3. Results & Explanations Review View ---
   renderResultView(container) {
     const res = this.calculateResults();
-    const isPassed = res.percentage >= 60;
+    const reqPercent = this.state.isMasteryChallenge ? this.state.requiredMasteryPercent : 60;
+    const isPassed = res.percentage >= reqPercent;
 
     container.innerHTML = `
       <div class="max-w-4xl mx-auto p-4 md:p-6 space-y-8">
         <!-- Score Card Hero -->
-        <div class="glass-panel p-6 md:p-8 rounded-2xl border ${isPassed ? 'border-emerald-500/30 bg-gradient-to-b from-emerald-950/20 to-slate-900' : 'border-rose-500/30 bg-gradient-to-b from-rose-950/20 to-slate-900'} relative overflow-hidden">
+        <div class="glass-panel p-6 md:p-8 rounded-2xl border ${isPassed ? 'border-emerald-500/40 bg-gradient-to-b from-emerald-950/30 to-slate-900' : 'border-rose-500/40 bg-gradient-to-b from-rose-950/30 to-slate-900'} relative overflow-hidden">
           <div class="flex flex-col md:flex-row items-center justify-between gap-6">
             <!-- Left: Score Ring & Summary -->
             <div class="flex items-center gap-6">
@@ -615,26 +753,33 @@ class QuizEngine {
               </div>
 
               <div>
-                <div class="flex items-center gap-2 mb-1">
-                  <span class="badge ${isPassed ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border-rose-500/40'}">
-                    ${isPassed ? '🎉 قبولی در آزمون' : '⚠️ نیازمند مرور بیشتر'}
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                  <span class="badge ${isPassed ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border-rose-500/40'} font-bold">
+                    ${isPassed ? (this.state.isMasteryChallenge ? '🏆 تبریک! تسلط ۹۰٪ کسب شد و شاخه باز گردید' : '🎉 قبولی در آزمون') : (this.state.isMasteryChallenge ? '🔒 عدم احراز تسلط ۹۰٪ (شاخه قفل باقی ماند)' : '⚠️ نیازمند مرور بیشتر')}
                   </span>
                   <span class="text-xs text-slate-400">مدت زمان: ${res.timeSpent}</span>
                 </div>
                 <h2 class="text-xl font-bold text-white mb-2">کارنامه تحلیلی: ${this.state.activeQuizTitle}</h2>
                 <p class="text-xs text-slate-300">
                   شما از مجموع <b>${res.total}</b> سوال، به <b>${res.correct}</b> سوال پاسخ صحیح دادید.
+                  ${this.state.isMasteryChallenge ? `<br/><span class="${isPassed ? 'text-emerald-400' : 'text-amber-400'} font-semibold">شرط قبولی چالش: حداقل ${this.state.requiredMasteryPercent}٪ پاسخ صحیح.</span>` : ''}
                 </p>
               </div>
             </div>
 
             <!-- Action buttons -->
             <div class="flex flex-wrap gap-2 shrink-0">
-              <button onclick="window.omniApp.quizEngine.startComprehensiveQuiz()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-bold text-xs shadow-lg transition cursor-pointer">
-                🔄 آزمون مجدد
-              </button>
+              ${this.state.isMasteryChallenge && this.state.targetMasteryNodeId ? `
+                <button onclick="window.omniApp.quizEngine.startMasteryChallengeForNode('${this.state.targetMasteryNodeId}')" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold text-xs shadow-lg transition cursor-pointer">
+                  🔄 تلاش مجدد برای تسلط ۹۰٪
+                </button>
+              ` : `
+                <button onclick="window.omniApp.quizEngine.startComprehensiveQuiz()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-bold text-xs shadow-lg transition cursor-pointer">
+                  🔄 آزمون مجدد
+                </button>
+              `}
               <button onclick="window.omniApp.quizEngine.state.view='home'; window.omniApp.quizEngine.render();" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition cursor-pointer">
-                🏠 بازگشت به لیست آزمون‌ها
+                🏠 لیست آزمون‌ها
               </button>
             </div>
           </div>
