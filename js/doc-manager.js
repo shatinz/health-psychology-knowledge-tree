@@ -17,6 +17,9 @@ class DocumentManager {
     if (window.DOC_CLINICAL_PSYCHOSOMATICS) {
       this.registerDocument(window.DOC_CLINICAL_PSYCHOSOMATICS);
     }
+    if (window.DOC_CHILD_PSYCHOPATHOLOGY) {
+      this.registerDocument(window.DOC_CHILD_PSYCHOPATHOLOGY);
+    }
   }
 
   registerDocument(doc) {
