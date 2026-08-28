@@ -86,10 +86,19 @@ class TreeRenderer {
     }
 
     if (node.researchers && node.researchers.length > 0) {
-      const resBadge = document.createElement("span");
-      resBadge.className = "badge badge-researcher";
-      resBadge.innerHTML = `👤 ${node.researchers.join(", ")}`;
-      badgeContainer.appendChild(resBadge);
+      node.researchers.forEach(r => {
+        const resBadge = document.createElement("span");
+        resBadge.className = "badge badge-researcher cursor-pointer hover:border-purple-400 hover:shadow-lg hover:shadow-purple-500/30 transition";
+        resBadge.innerHTML = `👤 ${r}`;
+        resBadge.title = `کلیک برای مشاهده شناسنامه و تمام نظریات ${r}`;
+        resBadge.onclick = (e) => {
+          e.stopPropagation();
+          if (window.omniApp && typeof window.omniApp.openTheoristModal === 'function') {
+            window.omniApp.openTheoristModal(r);
+          }
+        };
+        badgeContainer.appendChild(resBadge);
+      });
     }
 
     if (node.physiological_pathways && node.physiological_pathways.length > 0) {

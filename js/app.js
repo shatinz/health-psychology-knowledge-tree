@@ -16,11 +16,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const viewTreeBtn = document.getElementById('btn-view-tree');
   const viewGraphBtn = document.getElementById('btn-view-graph');
   const viewMatrixBtn = document.getElementById('btn-view-matrix');
+  const viewTheoristsBtn = document.getElementById('btn-view-theorists');
   const viewDocHubBtn = document.getElementById('btn-view-dochub');
 
   const viewTreeContainer = document.getElementById('view-tree');
   const viewGraphContainer = document.getElementById('view-graph');
   const viewMatrixContainer = document.getElementById('view-matrix');
+  const viewTheoristsContainer = document.getElementById('view-theorists');
   const viewDocHubContainer = document.getElementById('view-dochub');
 
   const docSelector = document.getElementById('doc-selector');
@@ -41,17 +43,30 @@ document.addEventListener('DOMContentLoaded', () => {
   btnCloseInspector?.addEventListener('click', closeInspector);
   inspectorBackdrop?.addEventListener('click', closeInspector);
 
-  // Close drawer and modal on ESC key
+  const diffModal = document.getElementById('diff-modal');
+  const btnCloseDiffModal = document.getElementById('btn-close-diff-modal');
+  const diffModalContent = document.getElementById('diff-modal-body');
+
+  const theoristModal = document.getElementById('theorist-modal');
+  const btnCloseTheoristModal = document.getElementById('btn-close-theorist-modal');
+  const theoristModalBody = document.getElementById('theorist-modal-body');
+  const theoristModalName = document.getElementById('theorist-modal-name');
+  const theoristModalField = document.getElementById('theorist-modal-field');
+
+  function closeTheoristModal() {
+    theoristModal?.classList.add('hidden');
+  }
+
+  btnCloseTheoristModal?.addEventListener('click', closeTheoristModal);
+
+  // Close drawer and modals on ESC key
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeInspector();
       diffModal?.classList.add('hidden');
+      closeTheoristModal();
     }
   });
-
-  const diffModal = document.getElementById('diff-modal');
-  const btnCloseDiffModal = document.getElementById('btn-close-diff-modal');
-  const diffModalContent = document.getElementById('diff-modal-body');
 
   const btnExpandAll = document.getElementById('btn-expand-all');
   const btnCollapseAll = document.getElementById('btn-collapse-all');
@@ -118,6 +133,10 @@ document.addEventListener('DOMContentLoaded', () => {
       viewMatrixBtn?.classList.add('active');
       viewMatrixContainer?.classList.remove('hidden');
       renderMatrixView();
+    } else if (viewName === 'theorists') {
+      viewTheoristsBtn?.classList.add('active');
+      viewTheoristsContainer?.classList.remove('hidden');
+      renderTheoristsView();
     } else if (viewName === 'doc_hub') {
       viewDocHubBtn?.classList.add('active');
       viewDocHubContainer?.classList.remove('hidden');
@@ -129,6 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
   viewTreeBtn?.addEventListener('click', () => switchView('tree'));
   viewGraphBtn?.addEventListener('click', () => switchView('graph'));
   viewMatrixBtn?.addEventListener('click', () => switchView('matrix'));
+  viewTheoristsBtn?.addEventListener('click', () => switchView('theorists'));
   viewDocHubBtn?.addEventListener('click', () => switchView('doc_hub'));
 
   docSelector?.addEventListener('change', (e) => {
@@ -137,6 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (activeView === 'tree') treeRenderer.render();
     if (activeView === 'graph') graphRenderer.initGraphData();
     if (activeView === 'matrix') renderMatrixView();
+    if (activeView === 'theorists') renderTheoristsView();
   });
 
   btnExpandAll?.addEventListener('click', () => treeRenderer.expandAll());
@@ -234,7 +255,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="mt-4">
           <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">پژوهشگران و نظریه‌پردازان:</h4>
           <div class="flex flex-wrap gap-1.5">
-            ${fullNode.researchers.map(r => `<span class="badge badge-researcher">👤 ${r}</span>`).join('')}
+            ${fullNode.researchers.map(r => `
+              <span class="badge badge-researcher cursor-pointer hover:border-purple-400 hover:shadow-lg hover:shadow-purple-500/30 transition" onclick="window.omniApp.openTheoristModal('${r.replace(/'/g, "\\'")}')" title="مشاهده شناسنامه و نظریات کامل ${r}">
+                👤 ${r} ↗
+              </span>
+            `).join('')}
           </div>
         </div>
       `;
@@ -501,62 +526,230 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Side-by-Side Diff Modal
-  function showSideBySideDiff(nodeIdA, nodeIdB) {
-    const nodeA = docManager.getNodeById(nodeIdA);
-    const nodeB = docManager.getNodeById(nodeIdB);
-    if (!nodeA || !nodeB || !diffModal || !diffModalContent) return;
+  // Theorists Encyclopedia View Renderer
+  function renderTheoristsView() {
+    if (!viewTheoristsContainer || !window.theoristEngine) return;
+    const theorists = window.theoristEngine.getAllTheoristsList();
 
-    const diff = similarityEngine.generateNodeDiff(nodeA, nodeB);
-
-    diffModalContent.innerHTML = `
-      <div class="space-y-5">
-        <div class="flex items-center justify-between p-3 rounded-lg bg-gray-900 border border-gray-800">
+    viewTheoristsContainer.innerHTML = `
+      <div class="p-6 max-w-7xl mx-auto space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-800 pb-4">
           <div>
-            <span class="text-xs text-gray-400">ضریب تقارب و تشابه معنایی:</span>
-            <span class="text-base font-bold text-sky-400 mr-2">${diff.similarityPercent}٪</span>
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+              <span>👥</span> دانشنامه و شناسنامه جامع نظریه‌پردازان و دانشمندان
+            </h2>
+            <p class="text-xs text-gray-400 mt-1">
+              نمایه کامل ${theorists.length} پژوهشگر، فیزیولوژیست و نظریه‌پرداز با متن کامل و دست‌نخورده نظریات مطرح‌شده در کتاب‌ها
+            </p>
           </div>
-          <div>
-            <span class="text-xs text-gray-400">شفافیت خط اتصال در گراف:</span>
-            <span class="text-base font-bold text-purple-400 mr-2">${(diff.visualAlpha * 100).toFixed(0)}٪</span>
-          </div>
-          <div>
-            <span class="text-xs text-gray-400">فاصله فضایی بهینه (Rest Length):</span>
-            <span class="text-base font-bold text-emerald-400 mr-2">${diff.restDistance.toFixed(0)}px</span>
+          <!-- Quick Search in Theorists -->
+          <div class="relative w-72">
+            <input 
+              type="text" 
+              id="theorist-search-input" 
+              placeholder="جستجو در نام دانشمند یا مکتب..." 
+              class="w-full bg-slate-900 border border-white/20 focus:border-purple-400 text-xs text-white px-3 py-2 rounded-xl focus:outline-none transition shadow-inner"
+            />
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="p-4 rounded-xl border border-sky-500/40 bg-sky-950/20">
-            <span class="badge" style="color:${diff.nodeA.docColor};">${diff.nodeA.docTitle}</span>
-            <h3 class="text-base font-bold text-white mt-1 mb-2">${diff.nodeA.title}</h3>
-            <p class="text-xs text-gray-300 leading-relaxed mb-3">${diff.nodeA.full_text}</p>
-            ${diff.nodeA.researchers.length ? `<div class="text-xs text-gray-400">👤 ${diff.nodeA.researchers.join(', ')}</div>` : ''}
-          </div>
-
-          <div class="p-4 rounded-xl border border-purple-500/40 bg-purple-950/20">
-            <span class="badge" style="color:${diff.nodeB.docColor};">${diff.nodeB.docTitle}</span>
-            <h3 class="text-base font-bold text-white mt-1 mb-2">${diff.nodeB.title}</h3>
-            <p class="text-xs text-gray-300 leading-relaxed mb-3">${diff.nodeB.full_text}</p>
-            ${diff.nodeB.researchers.length ? `<div class="text-xs text-gray-400">👤 ${diff.nodeB.researchers.join(', ')}</div>` : ''}
-          </div>
-        </div>
-
-        <div>
-          <h4 class="text-xs font-semibold text-gray-400 uppercase mb-2">کلیدواژه‌های مشترک میان دو مفهوم (${diff.sharedKeywords.length}):</h4>
-          <div class="flex flex-wrap gap-1.5">
-            ${diff.sharedKeywords.map(k => `<span class="badge badge-bio">#${k}</span>`).join('')}
-          </div>
+        <!-- Theorist Cards Grid -->
+        <div id="theorists-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          ${renderTheoristCards(theorists)}
         </div>
       </div>
     `;
 
-    diffModal.classList.remove('hidden');
+    const searchInput = document.getElementById('theorist-search-input');
+    searchInput?.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      const filtered = theorists.filter(t => 
+        t.rawName.toLowerCase().includes(q) || 
+        t.cleanName.toLowerCase().includes(q) ||
+        Array.from(t.docs).some(d => d.toLowerCase().includes(q))
+      );
+      const grid = document.getElementById('theorists-grid');
+      if (grid) grid.innerHTML = renderTheoristCards(filtered);
+    });
   }
 
-  btnCloseDiffModal?.addEventListener('click', () => {
-    diffModal?.classList.add('hidden');
-  });
+  function renderTheoristCards(list) {
+    if (!list.length) {
+      return `<div class="col-span-full p-8 text-center text-gray-400">نظریه‌پردازی با این مشخصات یافت نشد.</div>`;
+    }
+    return list.map(t => {
+      const dossier = window.theoristEngine.getTheoristDossier(t.rawName);
+      const p = dossier.profile;
+      const docsArray = Array.from(t.docs);
+
+      return `
+        <div class="glass-panel p-5 rounded-xl border border-purple-500/20 hover:border-purple-400/60 transition flex flex-col justify-between cursor-pointer hover:shadow-xl hover:shadow-purple-950/40" onclick="window.omniApp.openTheoristModal('${t.rawName.replace(/'/g, "\\'")}')">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="badge badge-researcher">👤 ${t.rawName}</span>
+              <span class="text-xs text-purple-400 font-semibold">${t.nodeCount} مبحث در کتاب</span>
+            </div>
+            <h4 class="text-sm font-bold text-white mt-1 mb-1">${p.title || t.cleanName}</h4>
+            <p class="text-xs text-purple-300/80 mb-2">${p.school || p.field || 'روانشناسی و علوم اعصاب'}</p>
+            <p class="text-xs text-gray-300 line-clamp-3 leading-relaxed mb-3">${p.coreConcept || p.bio || ''}</p>
+          </div>
+          <div class="pt-3 border-t border-gray-800 flex items-center justify-between text-xs">
+            <div class="flex flex-wrap gap-1">
+              ${docsArray.map(d => `<span class="badge badge-doc text-[10px]">${d}</span>`).join('')}
+            </div>
+            <span class="text-purple-400 font-semibold hover:underline">مشاهده شناسنامه و نظریات ➔</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Dedicated Theorist Full-Text Dossier Modal
+  function showTheoristModal(theoristName) {
+    if (!window.theoristEngine || !theoristModal || !theoristModalBody) return;
+    const dossier = window.theoristEngine.getTheoristDossier(theoristName);
+    const p = dossier.profile;
+
+    if (theoristModalName) theoristModalName.textContent = dossier.name;
+    if (theoristModalField) theoristModalField.textContent = `${p.school || ''} • ${p.field || ''}`;
+
+    let quoteHtml = '';
+    if (p.famousQuote) {
+      quoteHtml = `
+        <div class="p-3.5 rounded-xl bg-gradient-to-r from-purple-950/40 to-slate-900 border border-purple-500/30 text-purple-200 text-xs italic flex items-center gap-2">
+          <span class="text-xl">💬</span>
+          <div>«${p.famousQuote}»</div>
+        </div>
+      `;
+    }
+
+    let bioPathwaysHtml = '';
+    if (dossier.bioPathways.length > 0 || (p.keyMechanisms && p.keyMechanisms.length > 0)) {
+      const mechanisms = p.keyMechanisms || dossier.bioPathways;
+      bioPathwaysHtml = `
+        <div class="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/30 space-y-2">
+          <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+            <span>🧬</span> مسیرهای فیزیولوژیک، هورمون‌ها و مکانیسم‌های بیولوژیک مرتبط:
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-emerald-100">
+            ${mechanisms.map(m => `
+              <div class="flex items-start gap-1.5 p-1.5 rounded bg-black/30 border border-emerald-800/30">
+                <span class="text-emerald-400">•</span>
+                <span>${m}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Complete Unabridged Theories Full-Text from the Book
+    let theoriesFullTextHtml = dossier.nodes.map((node, index) => {
+      const full = node.full_text || node.summary || 'متن تفصیلی موجود نیست.';
+      return `
+        <div class="p-5 rounded-xl bg-slate-950/80 border border-white/10 space-y-3 shadow-inner hover:border-purple-400/50 transition">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-2">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center justify-center font-bold text-xs">${index + 1}</span>
+              <h4 class="text-sm font-bold text-white">${node.title}</h4>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="badge" style="background:${node.docColor || '#00d4ff'}22; color:${node.docColor || '#00d4ff'}; border:1px solid ${node.docColor || '#00d4ff'}66;">
+                ${node.docTitle || 'روانشناسی سلامت'}
+              </span>
+              <button class="px-2.5 py-1 bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 rounded border border-cyan-500/40 text-xs font-semibold flex items-center gap-1" onclick="window.omniApp.navigateToNodeFromModal('${node.id}')">
+                <span>📍</span> پرش به این بخش در درخت / گراف
+              </button>
+            </div>
+          </div>
+
+          <div class="prose prose-invert max-w-none text-xs text-gray-200 leading-relaxed space-y-2">
+            ${full.split('\n\n').map(para => `<p>${para.replace(/\n/g, '<br/>')}</p>`).join('')}
+          </div>
+
+          ${node.tags && node.tags.length ? `
+            <div class="flex flex-wrap gap-1.5 pt-2 border-t border-gray-900">
+              ${node.tags.map(t => `<span class="node-tag-pill">#${t}</span>`).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+
+    // Theoretical Contrasts involving this Theorist
+    let contrastsHtml = '';
+    if (dossier.relatedContrasts.length > 0) {
+      contrastsHtml = `
+        <div class="space-y-3">
+          <h4 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+            <span>⚡</span> مناظرات، تقابل‌ها و تضادهای نظری (${dossier.relatedContrasts.length}):
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            ${dossier.relatedContrasts.map(c => `
+              <div class="p-4 rounded-xl bg-amber-950/20 border border-amber-500/30 space-y-2">
+                <div class="text-xs font-bold text-amber-300">${c.contrast_title}</div>
+                <div class="text-[11px] text-gray-300">${c.description}</div>
+                ${c.comparison_table ? `
+                  <div class="overflow-x-auto rounded border border-gray-800 mt-2">
+                    <table class="w-full text-[11px] text-right text-gray-300">
+                      <thead class="bg-gray-900 text-gray-400">
+                        <tr>
+                          <th class="p-1.5 border-b border-gray-800">مؤلفه</th>
+                          <th class="p-1.5 border-b border-gray-800 text-sky-400">دیدگاه اول</th>
+                          <th class="p-1.5 border-b border-gray-800 text-purple-400">دیدگاه دوم</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${c.comparison_table.map(row => `
+                          <tr class="border-b border-gray-800/50">
+                            <td class="p-1.5 font-medium text-gray-300">${row.feature}</td>
+                            <td class="p-1.5 text-sky-200">${row.sideA}</td>
+                            <td class="p-1.5 text-purple-200">${row.sideB}</td>
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                ` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    theoristModalBody.innerHTML = `
+      <!-- Bio Profile Overview -->
+      <div class="p-5 rounded-xl bg-gradient-to-br from-slate-950 via-slate-900 to-purple-950/30 border border-purple-500/30 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="badge badge-researcher text-xs">👤 ${dossier.name}</span>
+          <span class="text-xs text-gray-400">${dossier.nodeCount} مبحث تخصصی در کتاب‌ها</span>
+        </div>
+        <h3 class="text-base font-bold text-white">${p.title || dossier.name}</h3>
+        <p class="text-xs text-gray-300 leading-relaxed">${p.bio || ''}</p>
+        ${quoteHtml}
+      </div>
+
+      ${bioPathwaysHtml}
+
+      <!-- Full-Text Theories Section -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between border-b border-gray-800 pb-2">
+          <h4 class="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+            <span>📖</span> شرح کامل و تفصیلی تمام نظریات در کتاب (${dossier.nodeCount} مبحث):
+          </h4>
+          <span class="text-[11px] text-gray-400 font-normal">متن کامل بدون تلخیص و حذفیات</span>
+        </div>
+        <div class="space-y-4">
+          ${theoriesFullTextHtml}
+        </div>
+      </div>
+
+      ${contrastsHtml}
+    `;
+
+    theoristModal.classList.remove('hidden');
+  }
 
   // Global helper exposures
   window.omniApp = {
@@ -565,6 +758,16 @@ document.addEventListener('DOMContentLoaded', () => {
       if (node) {
         if (activeView === 'tree') treeRenderer.scrollToNode(nodeId);
         else if (activeView === 'graph') graphRenderer.focusNode(nodeId);
+        openInspector(node);
+      }
+    },
+    navigateToNodeFromModal: (nodeId) => {
+      theoristModal?.classList.add('hidden');
+      diffModal?.classList.add('hidden');
+      const node = docManager.getNodeById(nodeId);
+      if (node) {
+        switchView('tree');
+        treeRenderer.scrollToNode(nodeId);
         openInspector(node);
       }
     },
@@ -577,6 +780,9 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     compareNodes: (nodeIdA, nodeIdB) => {
       showSideBySideDiff(nodeIdA, nodeIdB);
+    },
+    openTheoristModal: (theoristName) => {
+      showTheoristModal(theoristName);
     },
     selectDoc: (docId) => {
       docManager.setActiveDocument(docId);
@@ -601,3 +807,4 @@ document.addEventListener('DOMContentLoaded', () => {
   updateHUD();
   switchView('tree');
 });
+

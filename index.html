@@ -65,6 +65,9 @@
       <button id="btn-view-matrix" class="nav-tab-btn" title="ماتریس تضادها و مقایسه">
         <span>⚡</span> ماتریس تضادها
       </button>
+      <button id="btn-view-theorists" class="nav-tab-btn" title="دانشنامه و نظریات کامل دانشمندان">
+        <span>👥</span> نظریه‌پردازان
+      </button>
       <button id="btn-view-dochub" class="nav-tab-btn" title="مرکز اسناد و افزودن PDF">
         <span>📚</span> مدیریت اسناد
       </button>
@@ -188,7 +191,10 @@
     <!-- View 3: Cross-Doc Diff Matrix & Contrasts -->
     <div id="view-matrix" class="h-[calc(100vh-125px)] overflow-y-auto hidden"></div>
 
-    <!-- View 4: Document Hub & Ingestion -->
+    <!-- View 4: Theorists Encyclopedia -->
+    <div id="view-theorists" class="h-[calc(100vh-125px)] overflow-y-auto hidden"></div>
+
+    <!-- View 5: Document Hub & Ingestion -->
     <div id="view-dochub" class="h-[calc(100vh-125px)] overflow-y-auto hidden"></div>
   </main>
 
@@ -229,12 +235,34 @@
     </div>
   </div>
 
+  <!-- Dedicated Theorist Dossier Modal -->
+  <div id="theorist-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-purple-500/30 rounded-2xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl shadow-purple-950/50 overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-4 border-b border-white/10 flex items-center justify-between bg-slate-950">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl">👤</span>
+          <div>
+            <h3 id="theorist-modal-name" class="text-base font-bold text-white leading-tight">شناسنامه و نظریات جامع پژوهشگر</h3>
+            <p id="theorist-modal-field" class="text-xs text-purple-400">مکتب نظری و بالینی</p>
+          </div>
+        </div>
+        <button id="btn-close-theorist-modal" class="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition flex items-center justify-center font-bold" title="بستن (ESC)">
+          ✕
+        </button>
+      </div>
+      <!-- Modal Body -->
+      <div id="theorist-modal-body" class="p-6 overflow-y-auto flex-1 space-y-6"></div>
+    </div>
+  </div>
+
   <!-- Application Scripts -->
   <script src="js/data-health-psychology.js"></script>
   <script src="js/data-sample-doc2.js"></script>
   <script src="js/data-child-psychopathology.js"></script>
   <script src="js/doc-manager.js"></script>
   <script src="js/similarity-engine.js"></script>
+  <script src="js/theorist-engine.js"></script>
   <script src="js/tree-renderer.js"></script>
   <script src="js/graph-renderer.js"></script>
   <script src="js/search-engine.js"></script>
