@@ -29,8 +29,25 @@ document.addEventListener('DOMContentLoaded', () => {
   const filterPillsContainer = document.getElementById('filter-pills');
 
   const inspectorDrawer = document.getElementById('inspector-drawer');
+  const inspectorBackdrop = document.getElementById('inspector-backdrop');
   const btnCloseInspector = document.getElementById('btn-close-inspector');
   const inspectorContent = document.getElementById('inspector-content');
+
+  function closeInspector() {
+    inspectorDrawer?.classList.remove('is-open');
+    inspectorBackdrop?.classList.remove('is-open');
+  }
+
+  btnCloseInspector?.addEventListener('click', closeInspector);
+  inspectorBackdrop?.addEventListener('click', closeInspector);
+
+  // Close drawer and modal on ESC key
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeInspector();
+      diffModal?.classList.add('hidden');
+    }
+  });
 
   const diffModal = document.getElementById('diff-modal');
   const btnCloseDiffModal = document.getElementById('btn-close-diff-modal');
@@ -294,12 +311,9 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     `;
 
-    inspectorDrawer.classList.remove('translate-x-full');
+    inspectorDrawer?.classList.add('is-open');
+    inspectorBackdrop?.classList.add('is-open');
   }
-
-  btnCloseInspector?.addEventListener('click', () => {
-    inspectorDrawer?.classList.add('translate-x-full');
-  });
 
   // Matrix View Renderer
   function renderMatrixView() {
