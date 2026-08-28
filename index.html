@@ -71,11 +71,23 @@
       <button id="btn-view-dochub" class="nav-tab-btn" title="مرکز اسناد و افزودن PDF">
         <span>📚</span> مدیریت اسناد
       </button>
+      <!-- Zen Mode / Full View Toggle Button -->
+      <button id="btn-toggle-headers" class="px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 transition text-xs flex items-center gap-1.5 ml-1 shadow cursor-pointer" title="بستن نوارهای بالایی برای نمای کاملاً خلوت و باز (F)">
+        <span>👁️</span>
+        <span class="hidden md:inline">نمای خلوت</span>
+        <span>▲</span>
+      </button>
     </div>
   </header>
 
+  <!-- Floating Reveal Button when top bars are collapsed -->
+  <button id="btn-reveal-headers" class="fixed top-3 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full glass-panel bg-slate-900/95 hover:bg-slate-800 text-cyan-300 hover:text-white border border-cyan-500/40 text-xs font-semibold shadow-2xl transition cursor-pointer hidden flex items-center gap-2">
+    <span>▼ نمایش نوار ابزار و جستجو</span>
+    <span class="text-[10px] bg-cyan-950 px-1.5 py-0.5 rounded border border-cyan-500/30 text-cyan-400">Esc / F</span>
+  </button>
+
   <!-- Sub-Header: Real-Time Search & Floating HUD Stats -->
-  <div class="px-6 py-3 bg-slate-950/60 border-b border-white/5 flex flex-wrap items-center justify-between gap-4">
+  <div id="sub-header" class="px-6 py-3 bg-slate-950/60 border-b border-white/5 flex flex-wrap items-center justify-between gap-4">
     <!-- Search Bar -->
     <div class="relative flex-1 max-w-xl">
       <div class="relative flex items-center">
@@ -123,43 +135,58 @@
 
     <!-- View 2: Interactive Spatial Similarity Neural Canvas -->
     <div id="view-graph" class="h-[calc(100vh-125px)] relative hidden">
-      <!-- Graph Top Controls Bar -->
-      <div class="absolute top-4 left-4 z-10 glass-panel px-4 py-2.5 rounded-xl text-xs flex flex-wrap items-center gap-3 border border-white/10 shadow-xl">
+      <!-- Graph Top Controls Bar (Collapsible) -->
+      <div id="graph-controls-panel" class="absolute top-4 left-4 z-10 glass-panel px-3 py-2 rounded-xl text-xs flex flex-wrap items-center gap-3 border border-white/10 shadow-xl transition-all">
         <!-- Level of Detail -->
         <div class="flex items-center gap-1.5">
-          <span class="text-slate-400">عمق نمایش:</span>
+          <span class="text-slate-400">عمق:</span>
           <select id="graph-level-select" class="bg-slate-900 border border-white/20 text-cyan-300 rounded-lg px-2 py-1 text-xs focus:outline-none cursor-pointer">
-            <option value="chapters">فقط فصول اصلی (خلوت‌ترین)</option>
-            <option value="level2" selected>فصول + سرفصل‌ها (پیش‌فرض متوازن)</option>
-            <option value="all">گسترش تمام زیرگره‌ها (کامل)</option>
+            <option value="chapters">فقط فصول اصلی</option>
+            <option value="level2" selected>فصول + سرفصل‌ها</option>
+            <option value="all">تمام زیرگره‌ها</option>
           </select>
         </div>
 
         <div class="w-px h-4 bg-white/20"></div>
 
         <!-- Spacing Slider -->
-        <div class="flex items-center gap-2">
-          <span class="text-slate-400">فاصله گره‌ها:</span>
-          <input type="range" id="graph-spacing-slider" min="1.0" max="2.8" step="0.2" value="1.6" class="w-24 accent-cyan-400 cursor-pointer" title="تغییر فاصله و پراکندگی گره‌ها" />
+        <div class="flex items-center gap-1.5">
+          <span class="text-slate-400">فاصله:</span>
+          <input type="range" id="graph-spacing-slider" min="1.0" max="2.8" step="0.2" value="1.6" class="w-20 accent-cyan-400 cursor-pointer" title="تغییر فاصله و پراکندگی گره‌ها" />
         </div>
 
         <div class="w-px h-4 bg-white/20"></div>
 
         <!-- Action buttons -->
-        <button id="btn-graph-toggle-physics" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-white/10 transition flex items-center gap-1">
-          <span id="physics-icon">⏸️</span> <span id="physics-text">توقف فیزیک</span>
+        <button id="btn-graph-toggle-physics" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-white/10 transition flex items-center gap-1">
+          <span id="physics-icon">⏸️</span> <span id="physics-text">توقف</span>
         </button>
 
-        <button id="btn-graph-unpin-all" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg border border-amber-500/20 transition flex items-center gap-1" title="آزادسازی موقعیت گره‌های جابه‌جاشده">
-          <span>📌</span> رهاسازی پین‌ها
+        <button id="btn-graph-unpin-all" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg border border-amber-500/20 transition flex items-center gap-1" title="آزادسازی موقعیت گره‌های جابه‌جاشده">
+          <span>📌</span> رهاسازی
+        </button>
+
+        <!-- Minimize Button -->
+        <button id="btn-minimize-controls" class="w-6 h-6 rounded-lg bg-white/5 hover:bg-white/15 text-slate-400 hover:text-white transition flex items-center justify-center font-bold text-xs" title="بستن نوار تنظیمات">
+          ✕
         </button>
       </div>
 
-      <!-- Graph Legend Overlay -->
-      <div class="absolute top-4 right-4 z-10 glass-panel p-3 rounded-xl text-xs space-y-2 border border-white/10 shadow-xl max-w-[240px]">
+      <!-- Minimized Controls Restore Button -->
+      <button id="btn-restore-controls" class="absolute top-4 left-4 z-10 glass-panel px-3 py-1.5 rounded-xl text-xs text-cyan-400 hover:text-cyan-300 border border-cyan-500/30 shadow-xl hidden flex items-center gap-1.5 cursor-pointer">
+        <span>⚙️</span> تنظیمات گراف
+      </button>
+
+      <!-- Graph Legend Overlay (Collapsible) -->
+      <div id="graph-legend-panel" class="absolute top-4 right-4 z-10 glass-panel p-3 rounded-xl text-xs space-y-2 border border-white/10 shadow-xl max-w-[240px] transition-all">
         <div class="font-bold text-white mb-1 flex items-center justify-between">
-          <span>راهنمای تعاملی گراف:</span>
-          <span class="text-[10px] text-cyan-400 font-normal">کلیک = باز/بستن گره</span>
+          <div class="flex items-center gap-1">
+            <span>راهنمای گراف:</span>
+            <span class="text-[10px] text-cyan-400 font-normal">کلیک = باز/بستن</span>
+          </div>
+          <button id="btn-minimize-legend" class="w-5 h-5 rounded bg-white/5 hover:bg-white/15 text-slate-400 hover:text-white transition flex items-center justify-center font-bold text-xs" title="بستن راهنما">
+            ✕
+          </button>
         </div>
         <div class="flex items-center gap-2">
           <span class="w-3 h-3 rounded-full bg-cyan-400 inline-block shadow-sm shadow-cyan-400"></span>
@@ -185,6 +212,12 @@
           💡 می‌توانید هر گره را بکشید (Drag) و در محل دلخواه قرار دهید (پین می‌شود).
         </div>
       </div>
+
+      <!-- Minimized Legend Restore Button -->
+      <button id="btn-restore-legend" class="absolute top-4 right-4 z-10 glass-panel px-3 py-1.5 rounded-xl text-xs text-amber-400 hover:text-amber-300 border border-amber-500/30 shadow-xl hidden flex items-center gap-1.5 cursor-pointer">
+        <span>ℹ️</span> راهنمای گراف
+      </button>
+
       <canvas id="neural-graph-canvas" class="w-full h-full block bg-[#0a0e17] cursor-grab active:cursor-grabbing"></canvas>
     </div>
 

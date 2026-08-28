@@ -43,6 +43,30 @@ body {
   background: rgba(10, 14, 23, 0.85);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-color);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* Zen Mode / Header Collapse */
+body.headers-collapsed header,
+body.headers-collapsed #sub-header {
+  display: none !important;
+}
+
+body.headers-collapsed #view-tree,
+body.headers-collapsed #view-graph,
+body.headers-collapsed #view-matrix,
+body.headers-collapsed #view-theorists,
+body.headers-collapsed #view-dochub {
+  height: 100vh !important;
+}
+
+#btn-reveal-headers {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 0 15px rgba(56, 189, 248, 0.25);
+}
+
+#btn-reveal-headers:hover {
+  transform: translate(-50%, 2px) scale(1.05);
 }
 
 /* Nav Tabs */

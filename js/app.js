@@ -57,14 +57,66 @@ document.addEventListener('DOMContentLoaded', () => {
     theoristModal?.classList.add('hidden');
   }
 
-  btnCloseTheoristModal?.addEventListener('click', closeTheoristModal);
+  const btnToggleHeaders = document.getElementById('btn-toggle-headers');
+  const btnRevealHeaders = document.getElementById('btn-reveal-headers');
 
-  // Close drawer and modals on ESC key
+  function toggleZenMode() {
+    const isCollapsed = document.body.classList.toggle('headers-collapsed');
+    if (btnRevealHeaders) {
+      if (isCollapsed) btnRevealHeaders.classList.remove('hidden');
+      else btnRevealHeaders.classList.add('hidden');
+    }
+    if (activeView === 'graph' && graphRenderer) {
+      setTimeout(() => graphRenderer.resize(), 50);
+    }
+  }
+
+  btnToggleHeaders?.addEventListener('click', toggleZenMode);
+  btnRevealHeaders?.addEventListener('click', toggleZenMode);
+
+  // Graph Overlay Panels Minimize / Restore
+  const graphControlsPanel = document.getElementById('graph-controls-panel');
+  const btnMinimizeControls = document.getElementById('btn-minimize-controls');
+  const btnRestoreControls = document.getElementById('btn-restore-controls');
+
+  const graphLegendPanel = document.getElementById('graph-legend-panel');
+  const btnMinimizeLegend = document.getElementById('btn-minimize-legend');
+  const btnRestoreLegend = document.getElementById('btn-restore-legend');
+
+  btnMinimizeControls?.addEventListener('click', () => {
+    graphControlsPanel?.classList.add('hidden');
+    btnRestoreControls?.classList.remove('hidden');
+  });
+
+  btnRestoreControls?.addEventListener('click', () => {
+    graphControlsPanel?.classList.remove('hidden');
+    btnRestoreControls?.classList.add('hidden');
+  });
+
+  btnMinimizeLegend?.addEventListener('click', () => {
+    graphLegendPanel?.classList.add('hidden');
+    btnRestoreLegend?.classList.remove('hidden');
+  });
+
+  btnRestoreLegend?.addEventListener('click', () => {
+    graphLegendPanel?.classList.remove('hidden');
+    btnRestoreLegend?.classList.add('hidden');
+  });
+
+  // Close drawer and modals on ESC key, and toggle Zen with 'f'
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      closeInspector();
-      diffModal?.classList.add('hidden');
-      closeTheoristModal();
+      if (theoristModal && !theoristModal.classList.contains('hidden')) {
+        closeTheoristModal();
+      } else if (diffModal && !diffModal.classList.contains('hidden')) {
+        diffModal.classList.add('hidden');
+      } else if (inspectorDrawer && inspectorDrawer.classList.contains('is-open')) {
+        closeInspector();
+      } else if (document.body.classList.contains('headers-collapsed')) {
+        toggleZenMode();
+      }
+    } else if ((e.key === 'f' || e.key === 'F') && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+      toggleZenMode();
     }
   });
 
