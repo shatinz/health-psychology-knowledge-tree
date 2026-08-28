@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const viewMatrixBtn = document.getElementById('btn-view-matrix');
   const viewTheoristsBtn = document.getElementById('btn-view-theorists');
   const viewQuizBtn = document.getElementById('btn-view-quiz');
+  const viewPartnersBtn = document.getElementById('btn-view-partners');
   const viewDocHubBtn = document.getElementById('btn-view-dochub');
 
   const viewTreeContainer = document.getElementById('view-tree');
@@ -25,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const viewMatrixContainer = document.getElementById('view-matrix');
   const viewTheoristsContainer = document.getElementById('view-theorists');
   const viewQuizContainer = document.getElementById('view-quiz');
+  const viewPartnersContainer = document.getElementById('view-partners');
   const viewDocHubContainer = document.getElementById('view-dochub');
 
   const docSelector = document.getElementById('doc-selector');
@@ -143,6 +145,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const node = docManager.getNodeById(nodeId);
     if (node) openInspector(node);
   });
+  const feynmanEngine = new window.FeynmanEngine(docManager, (nodeId) => {
+    switchView('tree');
+    treeRenderer.scrollToNode(nodeId);
+    const node = docManager.getNodeById(nodeId);
+    if (node) openInspector(node);
+  });
+  const studyPartnerEngine = new window.StudyPartnerEngine(docManager);
 
   // Initialize Document Selector
   function updateDocSelector() {
@@ -177,8 +186,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Switch View
   function switchView(viewName) {
     activeView = viewName;
-    [viewTreeBtn, viewGraphBtn, viewMatrixBtn, viewTheoristsBtn, viewQuizBtn, viewDocHubBtn].forEach(b => b?.classList.remove('active'));
-    [viewTreeContainer, viewGraphContainer, viewMatrixContainer, viewTheoristsContainer, viewQuizContainer, viewDocHubContainer].forEach(c => c?.classList.add('hidden'));
+    [viewTreeBtn, viewGraphBtn, viewMatrixBtn, viewTheoristsBtn, viewQuizBtn, viewPartnersBtn, viewDocHubBtn].forEach(b => b?.classList.remove('active'));
+    [viewTreeContainer, viewGraphContainer, viewMatrixContainer, viewTheoristsContainer, viewQuizContainer, viewPartnersContainer, viewDocHubContainer].forEach(c => c?.classList.add('hidden'));
 
     if (viewName === 'tree') {
       viewTreeBtn?.classList.add('active');
@@ -201,6 +210,10 @@ document.addEventListener('DOMContentLoaded', () => {
       viewQuizBtn?.classList.add('active');
       viewQuizContainer?.classList.remove('hidden');
       quizEngine.render();
+    } else if (viewName === 'partners') {
+      viewPartnersBtn?.classList.add('active');
+      viewPartnersContainer?.classList.remove('hidden');
+      studyPartnerEngine.render('view-partners');
     } else if (viewName === 'doc_hub') {
       viewDocHubBtn?.classList.add('active');
       viewDocHubContainer?.classList.remove('hidden');
@@ -214,6 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
   viewMatrixBtn?.addEventListener('click', () => switchView('matrix'));
   viewTheoristsBtn?.addEventListener('click', () => switchView('theorists'));
   viewQuizBtn?.addEventListener('click', () => switchView('quiz'));
+  viewPartnersBtn?.addEventListener('click', () => switchView('partners'));
   viewDocHubBtn?.addEventListener('click', () => switchView('doc_hub'));
 
   const btnToggleExamMode = document.getElementById('btn-toggle-exam-mode');
@@ -466,22 +480,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const isMastered = quizEngine.isNodeMastered(fullNode.id);
+    const isFeynmanMastered = feynmanEngine.isNodeMastered(fullNode.id);
     const isExamMode = quizEngine.isExamModeActive;
 
     let masteryAlertHtml = '';
-    if (isMastered) {
+    if (isMastered || isFeynmanMastered) {
       masteryAlertHtml = `
-        <div class="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 text-xs text-emerald-300">
+        <div class="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 text-xs text-emerald-300 flex-wrap">
           <div class="flex items-center gap-2">
             <span class="text-lg">🏆</span>
             <div>
-              <div class="font-bold text-white">تسلط کامل احراز شده (۹۰٪+)</div>
-              <div class="text-[11px] text-emerald-400">شما با موفقیت آزمون این شاخه را با نمره عالی پشت سر گذاشته‌اید.</div>
+              <div class="font-bold text-white">تسلط کامل احراز شده</div>
+              <div class="text-[11px] text-emerald-400">
+                ${isMastered ? '✓ آزمون تستی ۹۰٪ پاس شد' : ''} ${isFeynmanMastered ? '✓ چالش بازگویی فاینمن پاس شد' : ''}
+              </div>
             </div>
           </div>
-          <button onclick="window.omniApp.startQuizForNode('${fullNode.id}')" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-500/40 text-[11px] font-semibold transition cursor-pointer">
-            تکرار آزمون
-          </button>
+          <div class="flex items-center gap-1.5">
+            <button onclick="window.omniApp.startQuizForNode('${fullNode.id}')" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-500/40 text-[11px] font-semibold transition cursor-pointer">
+              تکرار تست
+            </button>
+            <button onclick="window.omniApp.startFeynmanForNode('${fullNode.id}')" class="px-2.5 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-500/40 text-[11px] font-semibold transition cursor-pointer">
+              بازگویی فاینمن
+            </button>
+          </div>
         </div>
       `;
     } else if (isExamMode) {
@@ -489,15 +511,21 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/40 space-y-2.5 text-xs">
           <div class="flex items-center gap-2 text-amber-300 font-bold">
             <span class="text-base">🔒</span>
-            <span>حالت چالش تسلط ۹۰٪ فعال است</span>
+            <span>حالت چالش تسلط فعال است</span>
           </div>
           <p class="text-slate-300 text-xs leading-relaxed text-justify">
-            برای خروج از این شاخه و باز شدن سایر مباحث، باید در آزمون تسلط این بخش حداقل <b>۹۰٪ پاسخ صحیح</b> کسب نمایید.
+            برای خروج از این شاخه و باز شدن سایر مباحث، باید در آزمون تستی حداقل <b>۹۰٪</b> یا در چالش بازگویی فاینمن حداقل <b>۸۰٪</b> پوشش مفهومی کسب نمایید.
           </p>
-          <button onclick="window.omniApp.startQuizForNode('${fullNode.id}')" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2 cursor-pointer">
-            <span>🎯</span>
-            <span>شروع آزمون چالش ۹۰٪ این شاخه</span>
-          </button>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+            <button onclick="window.omniApp.startQuizForNode('${fullNode.id}')" class="py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-1.5 cursor-pointer">
+              <span>🎯</span>
+              <span>آزمون تستی ۹۰٪</span>
+            </button>
+            <button onclick="window.omniApp.startFeynmanForNode('${fullNode.id}')" class="py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-purple-600/20 transition flex items-center justify-center gap-1.5 cursor-pointer">
+              <span>🎙️</span>
+              <span>چالش فاینمن (۸۰٪)</span>
+            </button>
+          </div>
         </div>
       `;
     }
@@ -519,7 +547,11 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="flex items-center gap-2 mt-3 pt-2 border-t border-white/5 flex-wrap">
             <button onclick="window.omniApp.startQuizForNode('${fullNode.id}')" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white text-xs font-bold shadow transition flex items-center gap-1.5 cursor-pointer">
               <span>🎯</span>
-              <span>آزمون تسلط ۹۰٪ این مبحث</span>
+              <span>آزمون ۹۰٪</span>
+            </button>
+            <button onclick="window.omniApp.startFeynmanForNode('${fullNode.id}')" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow transition flex items-center gap-1.5 cursor-pointer">
+              <span>🎙️</span>
+              <span>چالش فاینمن (۸۰٪)</span>
             </button>
             <button onclick="window.omniApp.navigateToNode('${fullNode.id}')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition flex items-center gap-1.5 cursor-pointer">
               <span>🌲</span>
@@ -978,11 +1010,17 @@ document.addEventListener('DOMContentLoaded', () => {
       switchView('tree');
     },
     quizEngine: quizEngine,
+    feynmanEngine: feynmanEngine,
+    studyPartnerEngine: studyPartnerEngine,
     treeRenderer: treeRenderer,
     startQuizForNode: (nodeId) => {
       closeInspector();
       switchView('quiz');
       quizEngine.startQuickQuizForNode(nodeId);
+    },
+    startFeynmanForNode: (nodeId) => {
+      closeInspector();
+      feynmanEngine.openFeynmanModal(nodeId);
     },
     exportUniverse: () => {
       const json = docManager.exportCurrentUniverseJSON();

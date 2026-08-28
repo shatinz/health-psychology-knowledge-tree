@@ -458,7 +458,7 @@ CONSOLIDATED_SECTIONS = [
         "chapterTitle": "فصل دوازدهم: اختلالات فراگیر مربوط به رشد (PDD)",
         "title": "۲. سندروم رت (Rett) و اختلال ازهم‌پاشیدگی دوران کودکی (سندروم هلر)",
         "summary": "جهش ژنتیکی دختران در رت، حرکات قالبی شستن دست، تئودور هلر (۱۹۰۸) و پس‌رفت ۲ سال رشد طبیعی",
-        "pages": (47, 50),
+        "pages": (48, 49),
         "exam_weight": "high",
         "forecast_probability": 92,
         "required_quiz_count": 8

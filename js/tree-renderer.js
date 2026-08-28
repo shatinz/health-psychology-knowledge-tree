@@ -151,23 +151,26 @@ class TreeRenderer {
       badgeContainer.appendChild(weightBadge);
     }
 
-    // Mastery Badge (90%+)
-    if (window.omniApp && window.omniApp.quizEngine) {
-      if (window.omniApp.quizEngine.isNodeMastered(node.id)) {
+    // Mastery Badge (Quiz 90%+ or Feynman 80%+)
+    if (window.omniApp) {
+      const isQuizMastered = window.omniApp.quizEngine && window.omniApp.quizEngine.isNodeMastered(node.id);
+      const isFeynmanMastered = window.omniApp.feynmanEngine && window.omniApp.feynmanEngine.isNodeMastered(node.id);
+
+      if (isQuizMastered || isFeynmanMastered) {
         const masterBadge = document.createElement("span");
         masterBadge.className = "badge";
         masterBadge.style.background = "rgba(16, 185, 129, 0.2)";
         masterBadge.style.color = "#6ee7b7";
         masterBadge.style.border = "1px solid rgba(16, 185, 129, 0.4)";
-        masterBadge.textContent = "🏆 مسلط‌شده (۹۰٪+)";
+        masterBadge.textContent = isQuizMastered ? "🏆 تسلط آزمون (۹۰٪+)" : "🎙️ تسلط فاینمن (۸۰٪+)";
         badgeContainer.appendChild(masterBadge);
-      } else if (window.omniApp.quizEngine.isExamModeActive && (node.type === 'section' || node.exam_weight)) {
+      } else if (window.omniApp.quizEngine && window.omniApp.quizEngine.isExamModeActive && (node.type === 'section' || node.exam_weight)) {
         const lockBadge = document.createElement("span");
         lockBadge.className = "badge";
         lockBadge.style.background = "rgba(245, 158, 11, 0.2)";
         lockBadge.style.color = "#fbbf24";
         lockBadge.style.border = "1px solid rgba(245, 158, 11, 0.4)";
-        lockBadge.textContent = "🔒 نیازمند آزمون ۹۰٪";
+        lockBadge.textContent = "🔒 نیازمند آزمون/فاینمن";
         badgeContainer.appendChild(lockBadge);
       }
     }
