@@ -449,18 +449,24 @@ document.addEventListener('DOMContentLoaded', () => {
     inspectorContent.innerHTML = `
       <div class="p-5 space-y-4">
         <div class="border-b border-gray-800 pb-3">
-          <div class="flex items-center gap-2 mb-1">
+          <div class="flex items-center gap-2 mb-1 flex-wrap">
             <span class="badge" style="background:${fullNode.docColor || '#00d4ff'}22; color:${fullNode.docColor || '#00d4ff'}; border:1px solid ${fullNode.docColor || '#00d4ff'}66;">
               ${fullNode.docTitle || 'روانشناسی سلامت'}
             </span>
-            <span class="text-xs text-gray-400">${fullNode.type}</span>
+            <span class="text-xs text-gray-400 font-mono">${fullNode.type}</span>
+            ${fullNode.page ? `<span class="badge bg-slate-800 text-slate-300 border border-slate-700">📄 صفحه ${fullNode.page} کتاب</span>` : ''}
+            ${fullNode.pages ? `<span class="badge bg-slate-800 text-slate-300 border border-slate-700">📄 ${fullNode.pages}</span>` : ''}
           </div>
           <h2 class="text-lg font-bold text-white leading-snug">${fullNode.title}</h2>
           ${fullNode.parentTitle ? `<p class="text-xs text-gray-400 mt-1">شاخه والد: ${fullNode.parentTitle}</p>` : ''}
         </div>
 
-        <div class="prose prose-invert max-w-none text-sm text-gray-200 leading-relaxed space-y-3">
-          ${(fullNode.full_text || fullNode.summary || '').split('\n\n').map(p => `<p>${p.replace(/\n/g, '<br/>')}</p>`).join('')}
+        <div class="prose prose-invert max-w-none text-sm text-gray-200 leading-relaxed space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
+          <div class="text-xs font-semibold text-cyan-400 mb-1 flex items-center gap-1">
+            <span>📖</span>
+            <span>متن کامل و بدون حذفیات کتاب:</span>
+          </div>
+          ${(fullNode.full_text || fullNode.summary || '').split('\n\n').map(p => `<p class="text-justify">${p.replace(/\n/g, '<br/>')}</p>`).join('')}
         </div>
 
         ${diffDiagHtml}

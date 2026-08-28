@@ -108,6 +108,16 @@ class TreeRenderer {
       badgeContainer.appendChild(bioBadge);
     }
 
+    if (node.page) {
+      const pageBadge = document.createElement("span");
+      pageBadge.className = "badge badge-page";
+      pageBadge.style.backgroundColor = "rgba(100, 116, 139, 0.2)";
+      pageBadge.style.borderColor = "rgba(100, 116, 139, 0.4)";
+      pageBadge.style.color = "#94a3b8";
+      pageBadge.textContent = `📄 ص ${node.page}`;
+      badgeContainer.appendChild(pageBadge);
+    }
+
     if (hasChildren) {
       const countBadge = document.createElement("span");
       countBadge.className = "badge badge-count";

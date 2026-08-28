@@ -130,6 +130,63 @@ class TheoristEngine {
         school: "روان‌تحلیل‌گری و پویایی خانواده",
         coreConcept: "بی‌اشتهایی روانی به عنوان جدال برای خودمختاری و هویت‌یابی",
         bio: "بروچ اثبات کرد بی‌اشتهایی روانی (Anorexia) ناشی از رابطه درهم‌تنیده مادر-دختر و فقر خودمختاری است که در آن نخوردن غذا تنها ابزار اعمال کنترل کودک بر زندگی خویشتن است."
+      },
+      "توماس ایکن‌باخ (Thomas Achenbach)": {
+        field: "روانشناسی بالینی کودک و روان‌سنجی",
+        title: "مبدع نظام سنجش تجربی (ASEBA) و طبقه‌بندی عوامل درون‌ساخت و برون‌ساخت",
+        school: "روان‌سنجی بالینی و آسیب‌شناسی تجربی کودک",
+        coreConcept: "تفکیک نشانه‌های درون‌ساخت (Internalizing) و برون‌ساخت (Externalizing)",
+        bio: "توماس ایکن‌باخ در سال ۱۹۶۶ با بهره‌گیری از تحلیل عاملی نشان داد نابهنجاری‌های رفتاری کودکان به دو بعد کلان تقسیم می‌شود: نشانه‌های درون‌ساخت (افسردگی، اضطراب، تهوع، کناره‌گیری) و نشانه‌های برون‌ساخت (پرخاشگری، بزهکاری، دزدی، فرار از مدرسه).",
+        keyMechanisms: ["تحلیل عاملی الگوهای رفتاری کودکان", "سیاهه رفتاری کودک (CBCL) برای والدین، معلمان و خودسنجی", "تفکیک نشانگان اضطراب/افسردگی از رفتارهای هنجارشکن"]
+      },
+      "آنا فروید (Anna Freud)": {
+        field: "روان‌تحلیل‌گری و تحول کودک",
+        title: "بنیان‌گذار روانکاوی کودک و خطوط تحول روانی",
+        school: "روان‌تحلیل‌گری ایگو (Ego Psychology)",
+        coreConcept: "ارزیابی دفاع‌های ایگو متناسب با سن رشدی و کشاننده‌های جنسی/پرخاشگری",
+        bio: "آنا فروید معیارهای سنجش سلامت و آسیب‌شناسی روانی کودک را بر مبنای توانایی ایگو در به‌کارگیری دفاع‌های متناسب با سن رشدی و تعدیل کشاننده‌ها بنا نهاد."
+      },
+      "توماس فیر (Thomas Phaer)": {
+        field: "پزشکی و تاریخچه طب اطفال",
+        title: "نویسنده نخستین کتاب تخصصی روان‌پزشکی و بیماری‌های کودکان (۱۵۴۵)",
+        school: "تاریخچه طب اطفال",
+        coreConcept: "بررسی وحشت شبانه کودکان، نکوهش کودک‌کشی و حمایت از کودکان بی‌سرپرست",
+        bio: "توماس فیر در سال ۱۵۴۵ اولین اثر مدون در زمینه مشکلات روانی-رفتاری کودکان نظیر وحشت شبانه و لزوم پذیرش کودکان بی‌سرپرست در نهادهای حمایتی را نگاشت."
+      },
+      "ادوارد سگوین (Édouard Séguin)": {
+        field: "آموزش استثنایی و علوم اعصاب",
+        title: "پیشگام آموزش کودکان دارای ناتوانی ذهنی",
+        school: "آموزش حسی-حرکتی استثنایی",
+        coreConcept: "روش‌های آموزش حسی-حرکتی برای کودکان با آسیب‌های مغزی و ذهنی",
+        bio: "ادوارد سگوین اولین دانشمندی بود که روش‌های نظام‌مند آموزشی را برای ارتقای عملکردهای حسی، حرکتی و شناختی کودکان با معلولیت ذهنی پایه‌گذاری کرد."
+      },
+      "لایتنر ویتمر (Lightner Witmer)": {
+        field: "روانشناسی بالینی",
+        title: "بنیان‌گذار نخستین کلینیک روانشناسی جهان (۱۸۹۶)",
+        school: "روانشناسی بالینی و سنجش ناتوانی‌های یادگیری",
+        coreConcept: "درمان لکنت زبان و اختلالات یادگیری در بافت کلینیکی دانشگاه پنسیلوانیا",
+        bio: "ویتمر در سال ۱۸۹۶ با تأسیس اولین کلینیک روانشناسی در دانشگاه پنسیلوانیا، زمینه ارزیابی و درمان تخصصی لکنت زبان و نارسایی‌های یادگیری کودکان را فراهم کرد."
+      },
+      "تئودور هلر (Theodor Heller)": {
+        field: "روان‌پزشکی اطفال و علوم اعصاب",
+        title: "کاشف سندروم هلر (اختلال ازهم‌پاشیدگی دوران کودکی)",
+        school: "نوروپسیچیاتری تحولی",
+        coreConcept: "اختلال ازهم‌پاشیدگی دوران کودکی (Childhood Disintegrative Disorder / Dementia Infantilis)",
+        bio: "تئودور هلر در سال ۱۹۰۸ اختلالی را توصیف کرد که کودک پس از حداقل ۲ سال رشد کاملاً طبیعی، دچار افت شدید و قهقرایی در زبان، مهارتهای حرکتی، کنترل دفع و تعامل اجتماعی می‌شود."
+      },
+      "هانس آسپرگر (Hans Asperger)": {
+        field: "روان‌پزشکی کودکان و آسیب‌شناسی طیف اتیسم",
+        title: "کاشف سندروم آسپرگر",
+        school: "روان‌پزشکی تحولی و عصب‌شناختی",
+        coreConcept: "سندروم آسپرگر: نقص کیفی در تعامل اجتماعی و رفتارهای کلیشه‌ای همزمان با هوش طبیعی و رشد زبانی نرمال",
+        bio: "آسپرگر کودکانی با استعدادهای شناختی ویژه را توصیف کرد که علی‌رغم دایره لغات وسیع و هوش طبیعی، در ادراک ظرافت‌های هیجانی، زبان بدن و تعامل با همسالان نقایص جدی داشتند."
+      },
+      "آندریاس رت (Andreas Rett)": {
+        field: "عصب‌شناسی و بیماری‌های ژنتیکی اطفال",
+        title: "کاشف سندروم رت (Rett Syndrome)",
+        school: "نوروژنتیک بالینی",
+        coreConcept: "سندروم رت: جهش ژن MECP2 بر روی کروموزوم X با افت دور سر و حرکات قالبی شستن دست‌ها",
+        bio: "آندریاس رت در سال ۱۹۶۶ یک اختلال نورودولوپمنتال وابسته به X در دختران را توصیف کرد که با پس‌رفت مهارتهای حرکتی، کندی رشد دور سر و حرکات دست متمایز می‌شود."
       }
     };
   }
@@ -139,7 +196,26 @@ class TheoristEngine {
    */
   normalizeName(name) {
     if (!name) return '';
-    return name.replace(/\([^\)]*\)/g, '').trim();
+    return name
+      .replace(/\([^\)]*\)/g, '')
+      .replace(/[\u200c\s\_\-]+/g, ' ')
+      .replace(/[ي]/g, 'ی')
+      .replace(/[ك]/g, 'ک')
+      .replace(/[\u064B-\u065F]/g, '')
+      .trim();
+  }
+
+  nameMatches(name1, name2) {
+    const n1 = this.normalizeName(name1);
+    const n2 = this.normalizeName(name2);
+    if (!n1 || !n2) return false;
+    if (n1 === n2 || n1.includes(n2) || n2.includes(n1)) return true;
+    
+    // Ignore common first names to prevent false collisions
+    const commonFirstNames = ['توماس', 'جان', 'آلفرد', 'ویلیام', 'رابرت', 'مایکل', 'دیوید', 'آرون', 'هانس', 'ادوارد', 'ژان', 'کارل', 'لوئیس', 'هنری'];
+    const tokens1 = n1.split(' ').filter(t => t.length > 2 && !commonFirstNames.includes(t));
+    const tokens2 = n2.split(' ').filter(t => t.length > 2 && !commonFirstNames.includes(t));
+    return tokens1.length > 0 && tokens2.length > 0 && tokens1.some(t1 => tokens2.includes(t1));
   }
 
   /**
@@ -152,31 +228,40 @@ class TheoristEngine {
     const matchedNodes = [];
     let officialName = theoristQuery;
 
-    for (const node of allNodes) {
-      if (node.researchers && Array.isArray(node.researchers)) {
-        for (const res of node.researchers) {
-          if (this.normalizeName(res) === normQuery || res.includes(normQuery) || normQuery.includes(this.normalizeName(res))) {
-            matchedNodes.push(node);
-            officialName = res;
-            break;
-          }
-        }
-      } else {
-        // Also check if theorist name is mentioned in node full text or title
-        const fullText = (node.title || '') + ' ' + (node.full_text || '') + ' ' + (node.summary || '');
-        if (fullText.includes(normQuery) && !matchedNodes.some(m => m.id === node.id)) {
-          matchedNodes.push(node);
-        }
-      }
-    }
-
-    // Lookup curated profile metadata if available
+    // Lookup curated profile metadata if available first
     let profile = null;
     for (const [key, prof] of Object.entries(this.curatedProfiles)) {
-      if (this.normalizeName(key) === normQuery || key.includes(normQuery) || normQuery.includes(this.normalizeName(key))) {
+      if (this.nameMatches(key, theoristQuery)) {
         profile = prof;
         officialName = key;
         break;
+      }
+    }
+
+    for (const node of allNodes) {
+      let isMatch = false;
+      if (node.researchers && Array.isArray(node.researchers)) {
+        for (const res of node.researchers) {
+          if (this.nameMatches(res, theoristQuery) || (profile && this.nameMatches(res, officialName))) {
+            isMatch = true;
+            if (!officialName || officialName === theoristQuery) {
+              officialName = res;
+            }
+            break;
+          }
+        }
+      }
+      
+      if (!isMatch) {
+        // Also check if theorist name is mentioned in node full text or title
+        const fullText = this.normalizeName((node.title || '') + ' ' + (node.full_text || '') + ' ' + (node.summary || ''));
+        if (this.nameMatches(fullText, normQuery) || (profile && this.nameMatches(fullText, officialName))) {
+          isMatch = true;
+        }
+      }
+
+      if (isMatch && !matchedNodes.some(m => m.id === node.id)) {
+        matchedNodes.push(node);
       }
     }
 
