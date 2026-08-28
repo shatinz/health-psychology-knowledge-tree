@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Universal Knowledge Tree Document Schema",
+  "description": "Standard schema for ingesting any PDF/Book into the OmniTree Knowledge Engine",
+  "type": "object",
+  "required": ["id", "title", "author", "metadata", "tree", "cross_links", "contrasts"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the document, e.g., 'doc_health_psychology'"
+    },
+    "title": {
+      "type": "string",
+      "description": "Full title of the book / PDF"
+    },
+    "author": {
+      "type": "string",
+      "description": "Author(s) or compiler(s)"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "pages": { "type": "integer" },
+        "language": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "color": { "type": "string", "description": "HEX color used for this document nodes in multi-doc view" }
+      }
+    },
+    "tree": {
+      "type": "object",
+      "description": "Hierarchical node structure: Document -> Chapters -> Sections -> Subsections -> Detail Points",
+      "required": ["id", "title", "type", "children"],
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["root", "chapter", "section", "subsection", "concept", "point"] },
+        "summary": { "type": "string" },
+        "full_text": { "type": "string" },
+        "researchers": { "type": "array", "items": { "type": "string" } },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "clinical_relevance": { "type": "string" },
+        "physiological_pathways": { "type": "array", "items": { "type": "string" } },
+        "assessment_tools": { "type": "array", "items": { "type": "string" } },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/properties/tree" }
+        }
+      }
+    },
+    "cross_links": {
+      "type": "array",
+      "description": "Internal or external connections to other nodes/concepts",
+      "items": {
+        "type": "object",
+        "required": ["source", "target", "relation", "weight", "description"],
+        "properties": {
+          "source": { "type": "string" },
+          "target": { "type": "string" },
+          "relation": { "type": "string" },
+          "weight": { "type": "number", "minimum": 0.0, "maximum": 1.0, "description": "Similarity/Correlation strength between 0.0 and 1.0. Directly controls line transparency and spatial attraction." },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "contrasts": {
+      "type": "array",
+      "description": "Conceptual contrasts, opposing theoretical views, or differences between nodes",
+      "items": {
+        "type": "object",
+        "required": ["nodeA", "nodeB", "contrast_title", "dimension", "description"],
+        "properties": {
+          "nodeA": { "type": "string" },
+          "nodeB": { "type": "string" },
+          "contrast_title": { "type": "string" },
+          "dimension": { "type": "string" },
+          "comparison_table": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "feature": { "type": "string" },
+                "sideA": { "type": "string" },
+                "sideB": { "type": "string" }
+              }
+            }
+          },
+          "description": { "type": "string" }
+        }
+      }
+    }
+  }
+}

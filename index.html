@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>درخت دانش تعاملی روانشناسی سلامت | OmniTree Knowledge Universe</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              cyan: '#00d4ff',
+              purple: '#a855f7',
+              indigo: '#6366f1',
+              dark: '#0a0e17'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-[#0a0e17] text-slate-100 min-h-screen flex flex-col antialiased selection:bg-cyan-500/30 selection:text-cyan-200">
+
+  <!-- Top Glassmorphic Navigation Header -->
+  <header class="glass-header sticky top-0 z-40 px-4 py-3 border-b border-white/10 flex flex-wrap items-center justify-between gap-4">
+    <!-- Brand & Title -->
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+        <span class="text-xl">🌳</span>
+      </div>
+      <div>
+        <h1 class="text-base font-bold text-white flex items-center gap-2">
+          نقشه دانش تعاملی روانشناسی سلامت
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-normal">نسخه چندسندی</span>
+        </h1>
+        <p class="text-xs text-slate-400">کتاب دکتر احمد علی‌پور + موتور تحلیل بصری شباهت‌ها و تضادهای مفهومی</p>
+      </div>
+    </div>
+
+    <!-- Document Switcher -->
+    <div class="flex items-center gap-2 bg-slate-900/90 border border-white/10 px-3 py-1.5 rounded-xl shadow-inner">
+      <span class="text-xs text-slate-400">سند فعال:</span>
+      <select id="doc-selector" class="bg-transparent text-xs text-cyan-400 font-semibold focus:outline-none cursor-pointer pr-1">
+        <!-- Populated via JavaScript -->
+      </select>
+    </div>
+
+    <!-- View Mode Switcher -->
+    <div class="flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-white/10">
+      <button id="btn-view-tree" class="nav-tab-btn active" title="نمای درخت سلسله‌مراتبی">
+        <span>🌲</span> درخت دانش
+      </button>
+      <button id="btn-view-graph" class="nav-tab-btn" title="نمای گراف و فواصل معنایی">
+        <span>🕸️</span> گراف فواصل و شباهت‌ها
+      </button>
+      <button id="btn-view-matrix" class="nav-tab-btn" title="ماتریس تضادها و مقایسه">
+        <span>⚡</span> ماتریس تضادها
+      </button>
+      <button id="btn-view-dochub" class="nav-tab-btn" title="مرکز اسناد و افزودن PDF">
+        <span>📚</span> مدیریت اسناد
+      </button>
+    </div>
+  </header>
+
+  <!-- Sub-Header: Real-Time Search & Floating HUD Stats -->
+  <div class="px-6 py-3 bg-slate-950/60 border-b border-white/5 flex flex-wrap items-center justify-between gap-4">
+    <!-- Search Bar -->
+    <div class="relative flex-1 max-w-xl">
+      <div class="relative flex items-center">
+        <input 
+          type="text" 
+          id="main-search-input" 
+          placeholder="جستجوی بلادرنگ در مفاهیم، پژوهشگران (لازاروس، سلیه، بک...)، هورمون‌ها، بیماری‌ها..." 
+          class="w-full bg-slate-900/80 border border-white/15 focus:border-cyan-400 text-xs text-white placeholder-slate-400 px-4 py-2.5 rounded-xl pr-10 focus:outline-none transition shadow-inner"
+        />
+        <span class="absolute right-3 text-slate-400 text-sm">🔍</span>
+      </div>
+      <!-- Live Dropdown Results -->
+      <div id="search-results-dropdown" class="hidden"></div>
+    </div>
+
+    <!-- Quick Action Controls & HUD -->
+    <div class="flex items-center gap-3 text-xs">
+      <button id="btn-expand-all" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 transition">
+        ➕ باز کردن همه
+      </button>
+      <button id="btn-collapse-all" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 transition">
+        ➖ جمع کردن شاخه‌ها
+      </button>
+      <button id="btn-reset-graph" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 transition">
+        🎯 ریست زاویه دید
+      </button>
+
+      <!-- HUD Stats Pill -->
+      <div class="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-slate-900 border border-cyan-500/20 text-slate-300">
+        <div>گره‌ها: <b id="hud-total-nodes" class="text-cyan-400">۰</b></div>
+        <div class="w-px h-3 bg-white/20"></div>
+        <div>اتصالات: <b id="hud-links-count" class="text-purple-400">۰</b></div>
+        <div class="w-px h-3 bg-white/20"></div>
+        <div id="hud-active-doc" class="text-emerald-400 truncate max-w-[140px]">همه اسناد</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Workspaces Container -->
+  <main class="flex-1 relative overflow-hidden">
+    <!-- View 1: Collapsible Knowledge Tree -->
+    <div id="view-tree" class="h-[calc(100vh-125px)] overflow-y-auto">
+      <div id="tree-canvas-container" class="py-4"></div>
+    </div>
+
+    <!-- View 2: Interactive Spatial Similarity Neural Canvas -->
+    <div id="view-graph" class="h-[calc(100vh-125px)] relative hidden">
+      <!-- Graph Legend Overlay -->
+      <div class="absolute top-4 right-4 z-10 glass-panel p-3 rounded-xl text-xs space-y-2 border border-white/10">
+        <div class="font-bold text-white mb-1">راهنمای بصری گراف:</div>
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-cyan-400 inline-block shadow-sm shadow-cyan-400"></span>
+          <span class="text-slate-300">سند ۱ (روانشناسی سلامت)</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-purple-400 inline-block shadow-sm shadow-purple-400"></span>
+          <span class="text-slate-300">سند ۲ (روانشناسی بالینی)</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="w-6 h-0.5 bg-cyan-400 inline-block"></span>
+          <span class="text-slate-300">خطوط تشابه (شفافیت = میزان تقارب)</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="w-6 h-0.5 border-b-2 border-dashed border-amber-400 inline-block"></span>
+          <span class="text-amber-300">خطوط تضاد مفهومی ⚡</span>
+        </div>
+      </div>
+      <canvas id="neural-graph-canvas" class="w-full h-full block bg-[#0a0e17] cursor-grab active:cursor-grabbing"></canvas>
+    </div>
+
+    <!-- View 3: Cross-Doc Diff Matrix & Contrasts -->
+    <div id="view-matrix" class="h-[calc(100vh-125px)] overflow-y-auto hidden"></div>
+
+    <!-- View 4: Document Hub & Ingestion -->
+    <div id="view-dochub" class="h-[calc(100vh-125px)] overflow-y-auto hidden"></div>
+  </main>
+
+  <!-- Slide-out Node Inspector Drawer -->
+  <div id="inspector-drawer" class="fixed top-0 left-0 bottom-0 w-full md:w-[480px] bg-slate-900/95 backdrop-blur-2xl border-r border-white/15 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+    <!-- Header -->
+    <div class="p-4 border-b border-white/10 flex items-center justify-between bg-slate-950/80">
+      <div class="flex items-center gap-2">
+        <span class="text-cyan-400 text-lg">📋</span>
+        <h3 class="text-sm font-bold text-white">بازرس عمیق گره دانش</h3>
+      </div>
+      <button id="btn-close-inspector" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition">
+        ✕
+      </button>
+    </div>
+    <!-- Scrollable Content -->
+    <div id="inspector-content" class="flex-1 overflow-y-auto"></div>
+  </div>
+
+  <!-- Side-by-Side Diff Modal -->
+  <div id="diff-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-white/20 rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-4 border-b border-white/10 flex items-center justify-between bg-slate-950">
+        <div class="flex items-center gap-2">
+          <span class="text-xl text-amber-400">⚖️</span>
+          <h3 class="text-base font-bold text-white">تحلیل تطبیقی ساید‌بای‌ساید (Side-by-Side Diff)</h3>
+        </div>
+        <button id="btn-close-diff-modal" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition">
+          ✕
+        </button>
+      </div>
+      <!-- Modal Body -->
+      <div id="diff-modal-body" class="p-6 overflow-y-auto flex-1"></div>
+    </div>
+  </div>
+
+  <!-- Application Scripts -->
+  <script src="js/data-health-psychology.js"></script>
+  <script src="js/data-sample-doc2.js"></script>
+  <script src="js/doc-manager.js"></script>
+  <script src="js/similarity-engine.js"></script>
+  <script src="js/tree-renderer.js"></script>
+  <script src="js/graph-renderer.js"></script>
+  <script src="js/search-engine.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,563 @@
+/**
+ * Master Application Controller (OmniTree UI)
+ * Coordinates Tree, Graph, Diff Matrix, Document Hub, and Search Engine.
+ */
+
+document.addEventListener('DOMContentLoaded', () => {
+  const docManager = window.docManager;
+  const similarityEngine = window.similarityEngine;
+  const searchEngine = window.searchEngine;
+
+  let activeView = 'tree'; // 'tree' | 'graph' | 'matrix' | 'doc_hub'
+  let treeRenderer = null;
+  let graphRenderer = null;
+
+  // DOM Elements
+  const viewTreeBtn = document.getElementById('btn-view-tree');
+  const viewGraphBtn = document.getElementById('btn-view-graph');
+  const viewMatrixBtn = document.getElementById('btn-view-matrix');
+  const viewDocHubBtn = document.getElementById('btn-view-dochub');
+
+  const viewTreeContainer = document.getElementById('view-tree');
+  const viewGraphContainer = document.getElementById('view-graph');
+  const viewMatrixContainer = document.getElementById('view-matrix');
+  const viewDocHubContainer = document.getElementById('view-dochub');
+
+  const docSelector = document.getElementById('doc-selector');
+  const searchInput = document.getElementById('main-search-input');
+  const searchResultsDropdown = document.getElementById('search-results-dropdown');
+  const filterPillsContainer = document.getElementById('filter-pills');
+
+  const inspectorDrawer = document.getElementById('inspector-drawer');
+  const btnCloseInspector = document.getElementById('btn-close-inspector');
+  const inspectorContent = document.getElementById('inspector-content');
+
+  const diffModal = document.getElementById('diff-modal');
+  const btnCloseDiffModal = document.getElementById('btn-close-diff-modal');
+  const diffModalContent = document.getElementById('diff-modal-body');
+
+  const btnExpandAll = document.getElementById('btn-expand-all');
+  const btnCollapseAll = document.getElementById('btn-collapse-all');
+  const btnResetGraph = document.getElementById('btn-reset-graph');
+  const hudTotalNodes = document.getElementById('hud-total-nodes');
+  const hudActiveDoc = document.getElementById('hud-active-doc');
+  const hudLinksCount = document.getElementById('hud-links-count');
+
+  // Initialize Renderers
+  function handleNodeSelection(node) {
+    if (!node) return;
+    openInspector(node);
+  }
+
+  treeRenderer = new window.TreeRenderer('tree-canvas-container', docManager, handleNodeSelection);
+  graphRenderer = new window.GraphRenderer('neural-graph-canvas', docManager, similarityEngine, handleNodeSelection);
+
+  // Initialize Document Selector
+  function updateDocSelector() {
+    if (!docSelector) return;
+    const docs = docManager.listDocuments();
+    docSelector.innerHTML = '<option value="all">🌐 جهان چندسندی (همه اسناد یکپارچه)</option>';
+    docs.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = `📖 ${d.title} (${d.nodeCount} گره)`;
+      docSelector.appendChild(opt);
+    });
+    docSelector.value = docManager.activeDocId;
+  }
+
+  function updateHUD() {
+    const activeTree = docManager.getActiveTree();
+    const count = docManager.countNodes(activeTree);
+    if (hudTotalNodes) hudTotalNodes.textContent = count;
+    if (hudActiveDoc) {
+      if (docManager.activeDocId === 'all') {
+        hudActiveDoc.textContent = `${docManager.documents.size} سند فعال`;
+      } else {
+        const doc = docManager.documents.get(docManager.activeDocId);
+        hudActiveDoc.textContent = doc ? doc.title : 'سند نامشخص';
+      }
+    }
+    const links = docManager.getAllCrossLinks();
+    if (hudLinksCount) hudLinksCount.textContent = links.length;
+  }
+
+  // Switch View
+  function switchView(viewName) {
+    activeView = viewName;
+    [viewTreeBtn, viewGraphBtn, viewMatrixBtn, viewDocHubBtn].forEach(b => b?.classList.remove('active'));
+    [viewTreeContainer, viewGraphContainer, viewMatrixContainer, viewDocHubContainer].forEach(c => c?.classList.add('hidden'));
+
+    if (viewName === 'tree') {
+      viewTreeBtn?.classList.add('active');
+      viewTreeContainer?.classList.remove('hidden');
+      treeRenderer.render();
+    } else if (viewName === 'graph') {
+      viewGraphBtn?.classList.add('active');
+      viewGraphContainer?.classList.remove('hidden');
+      graphRenderer.resize();
+      graphRenderer.initGraphData();
+    } else if (viewName === 'matrix') {
+      viewMatrixBtn?.classList.add('active');
+      viewMatrixContainer?.classList.remove('hidden');
+      renderMatrixView();
+    } else if (viewName === 'doc_hub') {
+      viewDocHubBtn?.classList.add('active');
+      viewDocHubContainer?.classList.remove('hidden');
+      renderDocHubView();
+    }
+  }
+
+  // Event Listeners for Views
+  viewTreeBtn?.addEventListener('click', () => switchView('tree'));
+  viewGraphBtn?.addEventListener('click', () => switchView('graph'));
+  viewMatrixBtn?.addEventListener('click', () => switchView('matrix'));
+  viewDocHubBtn?.addEventListener('click', () => switchView('doc_hub'));
+
+  docSelector?.addEventListener('change', (e) => {
+    docManager.setActiveDocument(e.target.value);
+    updateHUD();
+    if (activeView === 'tree') treeRenderer.render();
+    if (activeView === 'graph') graphRenderer.initGraphData();
+    if (activeView === 'matrix') renderMatrixView();
+  });
+
+  btnExpandAll?.addEventListener('click', () => treeRenderer.expandAll());
+  btnCollapseAll?.addEventListener('click', () => treeRenderer.collapseToChapters());
+  btnResetGraph?.addEventListener('click', () => graphRenderer.resetView());
+
+  // Search Engine Integration
+  function performSearch() {
+    const q = searchInput?.value || '';
+    if (!q.trim()) {
+      if (searchResultsDropdown) searchResultsDropdown.classList.add('hidden');
+      treeRenderer.setHighlights([]);
+      return;
+    }
+
+    const results = searchEngine.search(q, { docId: docManager.activeDocId });
+    renderSearchResults(results);
+    const nodeIds = results.map(r => r.node.id);
+    treeRenderer.setHighlights(nodeIds);
+  }
+
+  searchInput?.addEventListener('input', performSearch);
+
+  function renderSearchResults(results) {
+    if (!searchResultsDropdown) return;
+    searchResultsDropdown.innerHTML = '';
+
+    if (results.length === 0) {
+      searchResultsDropdown.innerHTML = '<div class="p-3 text-sm text-gray-400">موردی یافت نشد.</div>';
+      searchResultsDropdown.classList.remove('hidden');
+      return;
+    }
+
+    results.slice(0, 8).forEach(res => {
+      const item = document.createElement('div');
+      item.className = 'search-result-item';
+      item.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="font-semibold text-sky-400">${res.node.title}</span>
+          <span class="text-xs text-gray-400">${res.matches.join(', ')}</span>
+        </div>
+        <div class="text-xs text-gray-300 truncate mt-1">${res.node.summary || res.node.full_text || ''}</div>
+      `;
+      item.onclick = () => {
+        searchResultsDropdown.classList.add('hidden');
+        if (activeView === 'tree') {
+          treeRenderer.scrollToNode(res.node.id);
+        } else if (activeView === 'graph') {
+          graphRenderer.focusNode(res.node.id);
+        }
+        openInspector(res.node);
+      };
+      searchResultsDropdown.appendChild(item);
+    });
+
+    searchResultsDropdown.classList.remove('hidden');
+  }
+
+  // Inspector Drawer Handler
+  function openInspector(node) {
+    if (!inspectorDrawer || !inspectorContent) return;
+
+    const fullNode = docManager.getNodeById(node.id) || node;
+    const isDocUniverse = docManager.activeDocId === 'all';
+
+    let researchersHtml = '';
+    if (fullNode.researchers && fullNode.researchers.length > 0) {
+      researchersHtml = `
+        <div class="mt-4">
+          <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">پژوهشگران و نظریه‌پردازان:</h4>
+          <div class="flex flex-wrap gap-1.5">
+            ${fullNode.researchers.map(r => `<span class="badge badge-researcher">👤 ${r}</span>`).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    let pathwaysHtml = '';
+    if (fullNode.physiological_pathways && fullNode.physiological_pathways.length > 0) {
+      pathwaysHtml = `
+        <div class="mt-4">
+          <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">مسیرها و هورمون‌های فیزیولوژیک:</h4>
+          <div class="flex flex-wrap gap-1.5">
+            ${fullNode.physiological_pathways.map(p => `<span class="badge badge-bio">🧬 ${p}</span>`).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    let tagsHtml = '';
+    if (fullNode.tags && fullNode.tags.length > 0) {
+      tagsHtml = `
+        <div class="mt-4">
+          <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">برچسب‌های موضوعی:</h4>
+          <div class="flex flex-wrap gap-1.5">
+            ${fullNode.tags.map(t => `<span class="node-tag-pill">#${t}</span>`).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Find cross links for this node
+    const allLinks = docManager.getAllCrossLinks();
+    const relatedLinks = allLinks.filter(l => l.source === fullNode.id || l.target === fullNode.id);
+    let linksHtml = '';
+    if (relatedLinks.length > 0) {
+      linksHtml = `
+        <div class="mt-5 p-3 rounded-lg bg-sky-950/30 border border-sky-800/40">
+          <h4 class="text-xs font-semibold text-sky-300 uppercase tracking-wider mb-2">🔗 پیوندها و اتصالات مفهومی مرتبط (${relatedLinks.length}):</h4>
+          <div class="space-y-2">
+            ${relatedLinks.map(l => {
+              const otherId = l.source === fullNode.id ? l.target : l.source;
+              const otherNode = docManager.getNodeById(otherId);
+              return `
+                <div class="text-xs p-2 rounded bg-black/40 border border-sky-700/30 cursor-pointer hover:border-sky-400 transition" onclick="window.omniApp.navigateToNode('${otherId}')">
+                  <div class="font-semibold text-sky-300">${l.relation}</div>
+                  <div class="text-gray-300 mt-1">${l.description}</div>
+                  <div class="text-[10px] text-gray-400 mt-1">مقصد: ${otherNode ? otherNode.title : otherId}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Find contrasts for this node
+    const allContrasts = docManager.getAllContrasts();
+    const relatedContrasts = allContrasts.filter(c => c.nodeA === fullNode.id || c.nodeB === fullNode.id);
+    let contrastsHtml = '';
+    if (relatedContrasts.length > 0) {
+      contrastsHtml = `
+        <div class="mt-4 p-3 rounded-lg bg-amber-950/30 border border-amber-800/40">
+          <h4 class="text-xs font-semibold text-amber-300 uppercase tracking-wider mb-2">⚡ تضادها و تمایزات نظری (${relatedContrasts.length}):</h4>
+          <div class="space-y-2">
+            ${relatedContrasts.map((c, idx) => `
+              <div class="text-xs p-2 rounded bg-black/40 border border-amber-700/30">
+                <div class="font-semibold text-amber-300">${c.contrast_title}</div>
+                <div class="text-gray-300 mt-1">${c.description}</div>
+                <button class="mt-2 text-[11px] px-2 py-1 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 rounded border border-amber-500/40" onclick="window.omniApp.showContrastModal(${idx})">
+                  مشاهده ماتریس مقایسه دو دیدگاه
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    inspectorContent.innerHTML = `
+      <div class="p-5 space-y-4">
+        <div class="border-b border-gray-800 pb-3">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="badge" style="background:${fullNode.docColor || '#00d4ff'}22; color:${fullNode.docColor || '#00d4ff'}; border:1px solid ${fullNode.docColor || '#00d4ff'}66;">
+              ${fullNode.docTitle || 'روانشناسی سلامت'}
+            </span>
+            <span class="text-xs text-gray-400">${fullNode.type}</span>
+          </div>
+          <h2 class="text-lg font-bold text-white leading-snug">${fullNode.title}</h2>
+          ${fullNode.parentTitle ? `<p class="text-xs text-gray-400 mt-1">شاخه والد: ${fullNode.parentTitle}</p>` : ''}
+        </div>
+
+        <div class="prose prose-invert max-w-none text-sm text-gray-200 leading-relaxed space-y-3">
+          ${(fullNode.full_text || fullNode.summary || '').split('\n\n').map(p => `<p>${p.replace(/\n/g, '<br/>')}</p>`).join('')}
+        </div>
+
+        ${researchersHtml}
+        ${pathwaysHtml}
+        ${tagsHtml}
+        ${linksHtml}
+        ${contrastsHtml}
+      </div>
+    `;
+
+    inspectorDrawer.classList.remove('translate-x-full');
+  }
+
+  btnCloseInspector?.addEventListener('click', () => {
+    inspectorDrawer?.classList.add('translate-x-full');
+  });
+
+  // Matrix View Renderer
+  function renderMatrixView() {
+    if (!viewMatrixContainer) return;
+    const contrasts = docManager.getAllContrasts();
+    const autoLinks = similarityEngine.discoverAutomatedLinks(0.25);
+
+    let contrastsCardsHtml = contrasts.map((c, i) => `
+      <div class="contrast-card glass-panel p-5 rounded-xl border border-amber-500/30 hover:border-amber-400/60 transition">
+        <div class="flex items-center justify-between mb-3">
+          <span class="badge" style="background:rgba(245, 158, 11, 0.2); color:#fbbf24; border:1px solid rgba(245, 158, 11, 0.4);">⚡ تضاد و تقابل نظری</span>
+          <span class="text-xs text-gray-400">${c.dimension}</span>
+        </div>
+        <h3 class="text-base font-bold text-white mb-2">${c.contrast_title}</h3>
+        <p class="text-xs text-gray-300 leading-relaxed mb-4">${c.description}</p>
+        
+        ${c.comparison_table ? `
+          <div class="overflow-x-auto rounded-lg border border-gray-800 mb-3">
+            <table class="w-full text-xs text-right text-gray-300">
+              <thead class="bg-gray-900/80 text-gray-400">
+                <tr>
+                  <th class="p-2 border-b border-gray-800">مؤلفه / بعد</th>
+                  <th class="p-2 border-b border-gray-800 text-sky-400">دیدگاه اول</th>
+                  <th class="p-2 border-b border-gray-800 text-purple-400">دیدگاه دوم</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${c.comparison_table.map(row => `
+                  <tr class="border-b border-gray-800/50 hover:bg-white/5">
+                    <td class="p-2 font-medium text-gray-300">${row.feature}</td>
+                    <td class="p-2 text-sky-200">${row.sideA}</td>
+                    <td class="p-2 text-purple-200">${row.sideB}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : ''}
+      </div>
+    `).join('');
+
+    let similaritiesHtml = autoLinks.slice(0, 12).map(l => {
+      const nodeA = docManager.getNodeById(l.source);
+      const nodeB = docManager.getNodeById(l.target);
+      if (!nodeA || !nodeB) return '';
+      return `
+        <div class="similarity-card glass-panel p-4 rounded-xl border border-sky-500/30 hover:border-sky-400 transition">
+          <div class="flex items-center justify-between mb-2">
+            <span class="badge badge-bio">همبستگی: ${Math.round(l.weight * 100)}٪</span>
+            <span class="text-xs text-gray-400">شفافیت بصری: ${(l.alpha * 100).toFixed(0)}٪</span>
+          </div>
+          <div class="flex items-center gap-2 text-xs font-semibold text-white my-2">
+            <span class="text-sky-400 truncate">${nodeA.title}</span>
+            <span class="text-gray-500">⇄</span>
+            <span class="text-purple-400 truncate">${nodeB.title}</span>
+          </div>
+          <p class="text-xs text-gray-300 mt-1">${l.description}</p>
+          <button class="mt-3 text-xs text-sky-400 hover:text-sky-300 underline" onclick="window.omniApp.compareNodes('${nodeA.id}', '${nodeB.id}')">
+            مقایسه عمیق ساید‌بای‌ساید (Side-by-Side Diff)
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    viewMatrixContainer.innerHTML = `
+      <div class="p-6 max-w-7xl mx-auto space-y-8">
+        <div>
+          <h2 class="text-xl font-bold text-white mb-1">ماتریس تضادها، تقابل‌ها و پیوندهای چندسندی</h2>
+          <p class="text-xs text-gray-400">تحلیل بصری تفاوت‌های مکاتب و پیوندهای ارگانیک بین فصول و اسناد مختلف</p>
+        </div>
+
+        <div>
+          <h3 class="text-sm font-semibold text-amber-400 uppercase tracking-wider mb-4">⚡ تضادهای بنیادین نظری و فلسفی (${contrasts.length})</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${contrastsCardsHtml}
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-sm font-semibold text-sky-400 uppercase tracking-wider mb-4">🔗 پل‌های تشابه و همگرایی خودکار بین مفاهیم</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            ${similaritiesHtml}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Document Hub View Renderer
+  function renderDocHubView() {
+    if (!viewDocHubContainer) return;
+    const docs = docManager.listDocuments();
+
+    viewDocHubContainer.innerHTML = `
+      <div class="p-6 max-w-5xl mx-auto space-y-6">
+        <div>
+          <h2 class="text-xl font-bold text-white mb-1">مرکز مدیریت اسناد و پایگاه دانش چندسندی</h2>
+          <p class="text-xs text-gray-400">بارگذاری PDFهای جدید، خروجی گرفتن و مدیریت درخت‌های دانش</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          ${docs.map(d => `
+            <div class="glass-panel p-5 rounded-xl border border-gray-800 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <span class="badge" style="background:${d.metadata?.color || '#00d4ff'}22; color:${d.metadata?.color || '#00d4ff'}; border:1px solid ${d.metadata?.color || '#00d4ff'}66;">
+                    ${d.metadata?.badge || 'سند'}
+                  </span>
+                  <span class="text-xs text-gray-400">${d.metadata?.pages || 0} صفحه</span>
+                </div>
+                <h3 class="text-base font-bold text-white mb-1">${d.title}</h3>
+                <p class="text-xs text-gray-400 mb-2">نویسنده / تدوین: ${d.author}</p>
+                <p class="text-xs text-gray-300">${d.metadata?.description || ''}</p>
+              </div>
+              <div class="mt-4 pt-3 border-t border-gray-800 flex items-center justify-between text-xs">
+                <span class="text-sky-400 font-semibold">${d.nodeCount} گره دانش</span>
+                <button class="px-3 py-1 bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 rounded border border-sky-500/40" onclick="window.omniApp.selectDoc('${d.id}')">
+                  مشاهده انحصاری این سند
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="glass-panel p-6 rounded-xl border border-dashed border-gray-700 text-center space-y-4">
+          <div class="text-4xl">📥</div>
+          <h3 class="text-base font-bold text-white">افزودن سند یا کتاب جدید به درخت دانش</h3>
+          <p class="text-xs text-gray-400 max-w-lg mx-auto leading-relaxed">
+            شما می‌توانید ساختار استخراج‌شده از هر کتاب یا PDF دیگر را در قالب استاندارد JSON بارگذاری نمایید تا فوراً به جهان دانش افزوده شده و فواصل و تضادهای آن به صورت خودکار محاسبه شود.
+          </p>
+          <div class="flex justify-center gap-3">
+            <input type="file" id="json-file-input" accept=".json" class="hidden" />
+            <button class="px-4 py-2 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white rounded-lg text-xs font-semibold shadow-lg" onclick="document.getElementById('json-file-input').click()">
+              انتخاب و بارگذاری فایل JSON سند جدید
+            </button>
+            <button class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-xs font-semibold border border-gray-700" onclick="window.omniApp.exportUniverse()">
+              دانلود کل پایگاه دانش (JSON)
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const fileInput = document.getElementById('json-file-input');
+    fileInput?.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = docManager.importJSONString(event.target.result);
+        alert(result.message);
+        if (result.success) {
+          updateDocSelector();
+          updateHUD();
+          renderDocHubView();
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  // Side-by-Side Diff Modal
+  function showSideBySideDiff(nodeIdA, nodeIdB) {
+    const nodeA = docManager.getNodeById(nodeIdA);
+    const nodeB = docManager.getNodeById(nodeIdB);
+    if (!nodeA || !nodeB || !diffModal || !diffModalContent) return;
+
+    const diff = similarityEngine.generateNodeDiff(nodeA, nodeB);
+
+    diffModalContent.innerHTML = `
+      <div class="space-y-5">
+        <div class="flex items-center justify-between p-3 rounded-lg bg-gray-900 border border-gray-800">
+          <div>
+            <span class="text-xs text-gray-400">ضریب تقارب و تشابه معنایی:</span>
+            <span class="text-base font-bold text-sky-400 mr-2">${diff.similarityPercent}٪</span>
+          </div>
+          <div>
+            <span class="text-xs text-gray-400">شفافیت خط اتصال در گراف:</span>
+            <span class="text-base font-bold text-purple-400 mr-2">${(diff.visualAlpha * 100).toFixed(0)}٪</span>
+          </div>
+          <div>
+            <span class="text-xs text-gray-400">فاصله فضایی بهینه (Rest Length):</span>
+            <span class="text-base font-bold text-emerald-400 mr-2">${diff.restDistance.toFixed(0)}px</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="p-4 rounded-xl border border-sky-500/40 bg-sky-950/20">
+            <span class="badge" style="color:${diff.nodeA.docColor};">${diff.nodeA.docTitle}</span>
+            <h3 class="text-base font-bold text-white mt-1 mb-2">${diff.nodeA.title}</h3>
+            <p class="text-xs text-gray-300 leading-relaxed mb-3">${diff.nodeA.full_text}</p>
+            ${diff.nodeA.researchers.length ? `<div class="text-xs text-gray-400">👤 ${diff.nodeA.researchers.join(', ')}</div>` : ''}
+          </div>
+
+          <div class="p-4 rounded-xl border border-purple-500/40 bg-purple-950/20">
+            <span class="badge" style="color:${diff.nodeB.docColor};">${diff.nodeB.docTitle}</span>
+            <h3 class="text-base font-bold text-white mt-1 mb-2">${diff.nodeB.title}</h3>
+            <p class="text-xs text-gray-300 leading-relaxed mb-3">${diff.nodeB.full_text}</p>
+            ${diff.nodeB.researchers.length ? `<div class="text-xs text-gray-400">👤 ${diff.nodeB.researchers.join(', ')}</div>` : ''}
+          </div>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-semibold text-gray-400 uppercase mb-2">کلیدواژه‌های مشترک میان دو مفهوم (${diff.sharedKeywords.length}):</h4>
+          <div class="flex flex-wrap gap-1.5">
+            ${diff.sharedKeywords.map(k => `<span class="badge badge-bio">#${k}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+
+    diffModal.classList.remove('hidden');
+  }
+
+  btnCloseDiffModal?.addEventListener('click', () => {
+    diffModal?.classList.add('hidden');
+  });
+
+  // Global helper exposures
+  window.omniApp = {
+    navigateToNode: (nodeId) => {
+      const node = docManager.getNodeById(nodeId);
+      if (node) {
+        if (activeView === 'tree') treeRenderer.scrollToNode(nodeId);
+        else if (activeView === 'graph') graphRenderer.focusNode(nodeId);
+        openInspector(node);
+      }
+    },
+    showContrastModal: (contrastIndex) => {
+      const contrasts = docManager.getAllContrasts();
+      const c = contrasts[contrastIndex];
+      if (c) {
+        showSideBySideDiff(c.nodeA, c.nodeB);
+      }
+    },
+    compareNodes: (nodeIdA, nodeIdB) => {
+      showSideBySideDiff(nodeIdA, nodeIdB);
+    },
+    selectDoc: (docId) => {
+      docManager.setActiveDocument(docId);
+      if (docSelector) docSelector.value = docId;
+      updateHUD();
+      switchView('tree');
+    },
+    exportUniverse: () => {
+      const json = docManager.exportCurrentUniverseJSON();
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `omnitree_knowledge_universe_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  // Initial Load
+  updateDocSelector();
+  updateHUD();
+  switchView('tree');
+});
