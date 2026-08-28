@@ -17,12 +17,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const viewGraphBtn = document.getElementById('btn-view-graph');
   const viewMatrixBtn = document.getElementById('btn-view-matrix');
   const viewTheoristsBtn = document.getElementById('btn-view-theorists');
+  const viewQuizBtn = document.getElementById('btn-view-quiz');
   const viewDocHubBtn = document.getElementById('btn-view-dochub');
 
   const viewTreeContainer = document.getElementById('view-tree');
   const viewGraphContainer = document.getElementById('view-graph');
   const viewMatrixContainer = document.getElementById('view-matrix');
   const viewTheoristsContainer = document.getElementById('view-theorists');
+  const viewQuizContainer = document.getElementById('view-quiz');
   const viewDocHubContainer = document.getElementById('view-dochub');
 
   const docSelector = document.getElementById('doc-selector');
@@ -135,6 +137,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   treeRenderer = new window.TreeRenderer('tree-canvas-container', docManager, handleNodeSelection);
   graphRenderer = new window.GraphRenderer('neural-graph-canvas', docManager, similarityEngine, handleNodeSelection);
+  const quizEngine = new window.QuizEngine(docManager, (nodeId) => {
+    switchView('tree');
+    treeRenderer.scrollToNode(nodeId);
+    const node = docManager.getNodeById(nodeId);
+    if (node) openInspector(node);
+  });
 
   // Initialize Document Selector
   function updateDocSelector() {
@@ -169,8 +177,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Switch View
   function switchView(viewName) {
     activeView = viewName;
-    [viewTreeBtn, viewGraphBtn, viewMatrixBtn, viewDocHubBtn].forEach(b => b?.classList.remove('active'));
-    [viewTreeContainer, viewGraphContainer, viewMatrixContainer, viewDocHubContainer].forEach(c => c?.classList.add('hidden'));
+    [viewTreeBtn, viewGraphBtn, viewMatrixBtn, viewTheoristsBtn, viewQuizBtn, viewDocHubBtn].forEach(b => b?.classList.remove('active'));
+    [viewTreeContainer, viewGraphContainer, viewMatrixContainer, viewTheoristsContainer, viewQuizContainer, viewDocHubContainer].forEach(c => c?.classList.add('hidden'));
 
     if (viewName === 'tree') {
       viewTreeBtn?.classList.add('active');
@@ -189,6 +197,10 @@ document.addEventListener('DOMContentLoaded', () => {
       viewTheoristsBtn?.classList.add('active');
       viewTheoristsContainer?.classList.remove('hidden');
       renderTheoristsView();
+    } else if (viewName === 'quiz') {
+      viewQuizBtn?.classList.add('active');
+      viewQuizContainer?.classList.remove('hidden');
+      quizEngine.render();
     } else if (viewName === 'doc_hub') {
       viewDocHubBtn?.classList.add('active');
       viewDocHubContainer?.classList.remove('hidden');
@@ -201,6 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
   viewGraphBtn?.addEventListener('click', () => switchView('graph'));
   viewMatrixBtn?.addEventListener('click', () => switchView('matrix'));
   viewTheoristsBtn?.addEventListener('click', () => switchView('theorists'));
+  viewQuizBtn?.addEventListener('click', () => switchView('quiz'));
   viewDocHubBtn?.addEventListener('click', () => switchView('doc_hub'));
 
   docSelector?.addEventListener('change', (e) => {
@@ -459,6 +472,16 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <h2 class="text-lg font-bold text-white leading-snug">${fullNode.title}</h2>
           ${fullNode.parentTitle ? `<p class="text-xs text-gray-400 mt-1">شاخه والد: ${fullNode.parentTitle}</p>` : ''}
+          <div class="flex items-center gap-2 mt-3 pt-2 border-t border-white/5 flex-wrap">
+            <button onclick="window.omniApp.startQuizForNode('${fullNode.id}')" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow transition flex items-center gap-1.5 cursor-pointer">
+              <span>📝</span>
+              <span>آزمون و تست از این مبحث</span>
+            </button>
+            <button onclick="window.omniApp.navigateToNode('${fullNode.id}')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition flex items-center gap-1.5 cursor-pointer">
+              <span>🌲</span>
+              <span>موقعیت در درخت</span>
+            </button>
+          </div>
         </div>
 
         <div class="prose prose-invert max-w-none text-sm text-gray-200 leading-relaxed space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
@@ -907,6 +930,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (docSelector) docSelector.value = docId;
       updateHUD();
       switchView('tree');
+    },
+    quizEngine: quizEngine,
+    startQuizForNode: (nodeId) => {
+      closeInspector();
+      switchView('quiz');
+      quizEngine.startQuickQuizForNode(nodeId);
     },
     exportUniverse: () => {
       const json = docManager.exportCurrentUniverseJSON();
