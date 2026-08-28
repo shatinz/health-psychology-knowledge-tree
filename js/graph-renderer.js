@@ -1,7 +1,13 @@
 /**
- * Interactive Spatial Neural & Similarity Graph Canvas
- * Implements force-directed physics, similarity-distance encoding, variable alpha transparency,
- * particle flows along synapses, and visual contrast lines.
+ * Ultra-Clean Interactive Spatial Neural & Similarity Graph Canvas
+ * Features:
+ * - Dynamic Node Expansion/Collapse (click (+) / (-) on nodes)
+ * - Drag & Pin (nodes stay exactly where dragged)
+ * - Strict Anti-Collision & Repulsion (nodes never overlap or cluster messily)
+ * - Text Pill Backgrounds (labels are 100% crisp and readable over links)
+ * - Variable Spacing & Force Controls
+ * - Dynamic Link Transparency (opacity proportional to similarity)
+ * - Pulsing Contrast Lines & Synapse Particle Streams
  */
 
 class GraphRenderer {
@@ -18,8 +24,17 @@ class GraphRenderer {
     this.particles = [];
     this.nodeMap = new Map();
 
+    // Expansion tracking: which nodes are currently expanded in the graph
+    this.expandedNodeIds = new Set();
+    this.expansionLevel = 'level2'; // 'chapters' | 'level2' | 'all'
+
+    // Spacing & Physics multipliers
+    this.spacingMultiplier = 1.6;
+    this.physicsRunning = true;
+    this.chargeStrength = 3200;
+
     // Viewport transforms
-    this.scale = 0.9;
+    this.scale = 0.85;
     this.offsetX = 0;
     this.offsetY = 0;
     this.isDragging = false;
@@ -29,11 +44,12 @@ class GraphRenderer {
     this.selectedNode = null;
     this.startX = 0;
     this.startY = 0;
+    this.dragMoved = false;
 
     // Filters
     this.showAutomatedLinks = true;
     this.showContrasts = true;
-    this.minSimilarityThreshold = 0.20;
+    this.minSimilarityThreshold = 0.25;
     this.animId = null;
 
     if (this.canvas) {
@@ -58,7 +74,68 @@ class GraphRenderer {
     this.height = h;
   }
 
+  setExpansionLevel(level) {
+    this.expansionLevel = level;
+    this.expandedNodeIds.clear();
+    const activeTree = this.docManager.getActiveTree();
+    if (!activeTree) return;
+
+    if (level === 'chapters') {
+      // Only root is expanded
+      this.expandedNodeIds.add(activeTree.id);
+      if (activeTree.children) {
+        activeTree.children.forEach(c => {
+          if (c.docId === 'universe' || c.type === 'root') {
+            this.expandedNodeIds.add(c.id);
+          }
+        });
+      }
+    } else if (level === 'level2') {
+      // Root and chapters expanded (shows sections)
+      this.expandedNodeIds.add(activeTree.id);
+      const expandUpToSections = (n, depth) => {
+        if (depth <= 2) {
+          this.expandedNodeIds.add(n.id);
+          if (n.children) n.children.forEach(c => expandUpToSections(c, depth + 1));
+        }
+      };
+      expandUpToSections(activeTree, 0);
+    } else if (level === 'all') {
+      // Expand everything
+      const expandAll = (n) => {
+        this.expandedNodeIds.add(n.id);
+        if (n.children) n.children.forEach(expandAll);
+      };
+      expandAll(activeTree);
+    }
+
+    this.initGraphData();
+  }
+
+  toggleNodeExpansion(nodeId) {
+    if (this.expandedNodeIds.has(nodeId)) {
+      // Collapse this node and all its descendants
+      const collapseRecursive = (id) => {
+        this.expandedNodeIds.delete(id);
+        const raw = this.docManager.getNodeById(id);
+        if (raw && raw.children) {
+          raw.children.forEach(c => collapseRecursive(c.id));
+        }
+      };
+      collapseRecursive(nodeId);
+    } else {
+      // Expand this node
+      this.expandedNodeIds.add(nodeId);
+    }
+    this.initGraphData();
+  }
+
   initGraphData() {
+    const oldPositions = new Map();
+    this.nodes.forEach(n => {
+      oldPositions.set(n.id, { x: n.x, y: n.y, pinned: n.pinned });
+    });
+
     this.nodes = [];
     this.links = [];
     this.contrasts = [];
@@ -68,18 +145,44 @@ class GraphRenderer {
     const activeTree = this.docManager.getActiveTree();
     if (!activeTree) return;
 
-    // 1. Flatten all active nodes
-    const flatten = (node, parent) => {
-      let radius = 22;
-      let color = node.docColor || '#00d4ff';
-      if (node.type === 'root') { radius = 32; color = '#38bdf8'; }
-      else if (node.type === 'chapter') { radius = 26; color = '#818cf8'; }
-      else if (node.type === 'section') { radius = 18; color = '#34d399'; }
-      else if (node.type === 'point') { radius = 13; color = '#f472b6'; }
+    // Set default initial expanded nodes if empty
+    if (this.expandedNodeIds.size === 0) {
+      this.setExpansionLevel(this.expansionLevel);
+      return;
+    }
 
-      // Initial random or clustered position
-      const angle = Math.random() * Math.PI * 2;
-      const dist = 50 + Math.random() * 300;
+    // 1. Traverse and build only currently expanded visible nodes
+    let chapterIndex = 0;
+    const totalChapters = activeTree.children ? activeTree.children.length : 1;
+
+    const buildVisibleGraph = (node, parent, angleHint, distHint) => {
+      const hasChildren = node.children && node.children.length > 0;
+      const isExpanded = this.expandedNodeIds.has(node.id);
+
+      let radius = 24;
+      let color = node.docColor || '#00d4ff';
+      if (node.type === 'root') { radius = 38; color = '#38bdf8'; }
+      else if (node.type === 'chapter') { radius = 30; color = '#818cf8'; }
+      else if (node.type === 'section') { radius = 22; color = '#34d399'; }
+      else if (node.type === 'point') { radius = 16; color = '#f472b6'; }
+
+      let x, y, pinned = false;
+      const old = oldPositions.get(node.id);
+      if (old) {
+        x = old.x;
+        y = old.y;
+        pinned = old.pinned;
+      } else if (parent) {
+        // Spawn around parent with radial layout
+        const angle = angleHint !== undefined ? angleHint : Math.random() * Math.PI * 2;
+        const dist = distHint || (node.type === 'chapter' ? 280 : 160) * this.spacingMultiplier;
+        x = parent.x + Math.cos(angle) * dist;
+        y = parent.y + Math.sin(angle) * dist;
+      } else {
+        x = 0;
+        y = 0;
+        pinned = true; // Pin root in center by default
+      }
 
       const graphNode = {
         id: node.id,
@@ -92,41 +195,58 @@ class GraphRenderer {
         docId: node.docId || 'hp',
         docTitle: node.docTitle,
         docColor: node.docColor,
-        x: Math.cos(angle) * dist,
-        y: Math.sin(angle) * dist,
+        x: x,
+        y: y,
         vx: 0,
         vy: 0,
         radius: radius,
         baseColor: color,
+        hasChildren: hasChildren,
+        isExpanded: isExpanded,
+        childCount: hasChildren ? node.children.length : 0,
+        pinned: pinned,
         rawNode: node
       };
 
       this.nodes.push(graphNode);
       this.nodeMap.set(node.id, graphNode);
 
-      // Hierarchical backbone link
+      // Hierarchical Link to Parent
       if (parent) {
+        let restDist = (node.type === 'chapter' ? 260 : (node.type === 'section' ? 170 : 120)) * this.spacingMultiplier;
         this.links.push({
           sourceId: parent.id,
           targetId: node.id,
           source: parent,
           target: graphNode,
           type: 'hierarchy',
-          weight: 0.8,
-          alpha: 0.35,
-          restDistance: node.type === 'chapter' ? 160 : 85,
+          weight: 0.9,
+          alpha: 0.45,
+          restDistance: restDist,
           color: color
         });
       }
 
-      if (node.children) {
-        node.children.forEach(c => flatten(c, graphNode));
+      // Recursively include children if expanded
+      if (hasChildren && isExpanded) {
+        const numChildren = node.children.length;
+        node.children.forEach((child, idx) => {
+          let childAngle;
+          if (node.type === 'root') {
+            childAngle = (idx / numChildren) * Math.PI * 2;
+          } else {
+            const baseAngle = parent ? Math.atan2(graphNode.y - parent.y, graphNode.x - parent.x) : 0;
+            const spread = Math.PI * 0.85;
+            childAngle = baseAngle - (spread / 2) + (idx / Math.max(1, numChildren - 1)) * spread;
+          }
+          buildVisibleGraph(child, graphNode, childAngle, (node.type === 'chapter' ? 190 : 130) * this.spacingMultiplier);
+        });
       }
     };
 
-    flatten(activeTree, null);
+    buildVisibleGraph(activeTree, null);
 
-    // 2. Add Curated Cross-links
+    // 2. Add Curated Cross-links (only between currently visible nodes)
     const crossLinks = this.docManager.getAllCrossLinks();
     crossLinks.forEach(cl => {
       const src = this.nodeMap.get(cl.source);
@@ -134,7 +254,7 @@ class GraphRenderer {
       if (src && tgt) {
         const sim = cl.weight || 0.85;
         const alpha = this.similarityEngine.similarityToAlpha(sim);
-        const restDist = this.similarityEngine.similarityToRestDistance(sim);
+        const restDist = (this.similarityEngine.similarityToRestDistance(sim) + 80) * this.spacingMultiplier;
         this.links.push({
           sourceId: cl.source,
           targetId: cl.target,
@@ -151,7 +271,7 @@ class GraphRenderer {
       }
     });
 
-    // 3. Add Automated Similarity Bridges
+    // 3. Add Automated Similarity Bridges (above threshold and visible)
     if (this.showAutomatedLinks) {
       const autoLinks = this.similarityEngine.discoverAutomatedLinks(this.minSimilarityThreshold);
       autoLinks.forEach(al => {
@@ -167,7 +287,7 @@ class GraphRenderer {
             relation: al.relation,
             weight: al.weight,
             alpha: al.alpha,
-            restDistance: al.restDistance,
+            restDistance: (al.restDistance + 100) * this.spacingMultiplier,
             color: al.isCrossDoc ? '#a855f7' : '#00d4ff',
             description: al.description
           });
@@ -175,7 +295,7 @@ class GraphRenderer {
       });
     }
 
-    // 4. Add Conceptual Contrasts (Opposing Views)
+    // 4. Add Conceptual Contrasts (visible only)
     if (this.showContrasts) {
       const contrastsData = this.docManager.getAllContrasts();
       contrastsData.forEach(c => {
@@ -190,20 +310,20 @@ class GraphRenderer {
             description: c.description,
             comparison_table: c.comparison_table,
             color: '#f59e0b',
-            restDistance: 240
+            restDistance: 320 * this.spacingMultiplier
           });
         }
       });
     }
 
-    // 5. Seed streaming synapse particles
+    // 5. Seed Synapse Particles along active links
     this.links.forEach(l => {
-      if (l.weight >= 0.5) {
+      if (l.weight >= 0.4) {
         this.particles.push({
           link: l,
           progress: Math.random(),
-          speed: 0.005 + (l.weight * 0.008),
-          size: 2 + (l.weight * 2),
+          speed: 0.004 + (l.weight * 0.006),
+          size: 2.5 + (l.weight * 2),
           color: l.color || '#38bdf8'
         });
       }
@@ -215,7 +335,9 @@ class GraphRenderer {
   startSimulation() {
     if (this.animId) cancelAnimationFrame(this.animId);
     const loop = () => {
-      this.updatePhysics();
+      if (this.physicsRunning) {
+        this.updatePhysics();
+      }
       this.draw();
       this.animId = requestAnimationFrame(loop);
     };
@@ -223,9 +345,12 @@ class GraphRenderer {
   }
 
   updatePhysics() {
-    // 1. Charge Repulsion between all nodes
-    for (let i = 0; i < this.nodes.length; i++) {
-      for (let j = i + 1; j < this.nodes.length; j++) {
+    const nodeCount = this.nodes.length;
+    if (nodeCount === 0) return;
+
+    // 1. Charge Repulsion (Strong anti-cluster force)
+    for (let i = 0; i < nodeCount; i++) {
+      for (let j = i + 1; j < nodeCount; j++) {
         const n1 = this.nodes[i];
         const n2 = this.nodes[j];
         const dx = n2.x - n1.x;
@@ -233,13 +358,26 @@ class GraphRenderer {
         const distSq = dx * dx + dy * dy || 1;
         const dist = Math.sqrt(distSq);
 
-        if (dist < 400) {
-          const force = (800 / (distSq + 50));
+        // Repulsion range
+        const maxRepelDist = 650 * this.spacingMultiplier;
+        if (dist < maxRepelDist) {
+          const force = (this.chargeStrength * this.spacingMultiplier) / (distSq + 200);
           const fx = (dx / dist) * force;
           const fy = (dy / dist) * force;
 
-          if (n1 !== this.dragNode) { n1.vx -= fx; n1.vy -= fy; }
-          if (n2 !== this.dragNode) { n2.vx += fx; n2.vy += fy; }
+          if (!n1.pinned && n1 !== this.dragNode) { n1.vx -= fx; n1.vy -= fy; }
+          if (!n2.pinned && n2 !== this.dragNode) { n2.vx += fx; n2.vy += fy; }
+        }
+
+        // Hard Collision Avoidance: Circles must never penetrate or overlap!
+        const minDist = n1.radius + n2.radius + 50;
+        if (dist < minDist) {
+          const overlap = (minDist - dist) * 0.5;
+          const ox = (dx / dist) * overlap;
+          const oy = (dy / dist) * overlap;
+
+          if (!n1.pinned && n1 !== this.dragNode) { n1.x -= ox; n1.y -= oy; }
+          if (!n2.pinned && n2 !== this.dragNode) { n2.x += ox; n2.y += oy; }
         }
       }
     }
@@ -254,16 +392,16 @@ class GraphRenderer {
       const dy = n2.y - n1.y;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
       const displacement = dist - l.restDistance;
-      const k = 0.025 * (l.weight || 0.5);
+      const k = 0.018 * (l.weight || 0.5);
 
       const fx = (dx / dist) * (displacement * k);
       const fy = (dy / dist) * (displacement * k);
 
-      if (n1 !== this.dragNode) { n1.vx += fx; n1.vy += fy; }
-      if (n2 !== this.dragNode) { n2.vx -= fx; n2.vy -= fy; }
+      if (!n1.pinned && n1 !== this.dragNode) { n1.vx += fx; n1.vy += fy; }
+      if (!n2.pinned && n2 !== this.dragNode) { n2.vx -= fx; n2.vy -= fy; }
     });
 
-    // 3. Contrasts spring forces
+    // 3. Contrast Forces
     this.contrasts.forEach(c => {
       const n1 = c.source;
       const n2 = c.target;
@@ -272,22 +410,27 @@ class GraphRenderer {
       const dy = n2.y - n1.y;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
       const displacement = dist - c.restDistance;
-      const fx = (dx / dist) * (displacement * 0.012);
-      const fy = (dy / dist) * (displacement * 0.012);
-      if (n1 !== this.dragNode) { n1.vx += fx; n1.vy += fy; }
-      if (n2 !== this.dragNode) { n2.vx -= fx; n2.vy -= fy; }
+      const fx = (dx / dist) * (displacement * 0.008);
+      const fy = (dy / dist) * (displacement * 0.008);
+      if (!n1.pinned && n1 !== this.dragNode) { n1.vx += fx; n1.vy += fy; }
+      if (!n2.pinned && n2 !== this.dragNode) { n2.vx += fx; n2.vy += fy; }
     });
 
-    // 4. Center Gravity & Velocity Dampening
+    // 4. Center Soft Gravity & Velocity Dampening
     this.nodes.forEach(n => {
-      if (n === this.dragNode) return;
-      // Gravity toward origin
-      n.vx -= n.x * 0.0015;
-      n.vy -= n.y * 0.0015;
+      if (n.pinned || n === this.dragNode) {
+        n.vx = 0;
+        n.vy = 0;
+        return;
+      }
 
-      // Dampening
-      n.vx *= 0.88;
-      n.vy *= 0.88;
+      // Soft gravity pull toward origin to prevent infinite drift
+      n.vx -= n.x * 0.0006;
+      n.vy -= n.y * 0.0006;
+
+      // Friction / Dampening
+      n.vx *= 0.84;
+      n.vy *= 0.84;
 
       n.x += n.vx;
       n.y += n.vy;
@@ -327,11 +470,11 @@ class GraphRenderer {
       ctx.lineTo(n2.x, n2.y);
 
       let alpha = l.alpha;
-      let width = 1.0 + (l.weight * 2.5);
+      let width = 1.5 + (l.weight * 2.5);
 
       if (isConnectedToSelected || isConnectedToHover) {
-        alpha = Math.min(1.0, alpha + 0.4);
-        width += 1.5;
+        alpha = Math.min(1.0, alpha + 0.45);
+        width += 2.0;
         ctx.strokeStyle = '#38bdf8';
       } else {
         ctx.strokeStyle = l.color || '#38bdf8';
@@ -351,27 +494,27 @@ class GraphRenderer {
 
       ctx.save();
       ctx.beginPath();
-      ctx.setLineDash([6, 6]);
+      ctx.setLineDash([8, 6]);
       ctx.moveTo(n1.x, n1.y);
       ctx.lineTo(n2.x, n2.y);
       ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 2.0;
-      ctx.globalAlpha = 0.85;
+      ctx.lineWidth = 2.5;
+      ctx.globalAlpha = 0.9;
       ctx.stroke();
 
       // Draw contrast icon badge in middle of line
       const midX = (n1.x + n2.x) / 2;
       const midY = (n1.y + n2.y) / 2;
       ctx.beginPath();
-      ctx.arc(midX, midY, 11, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(245, 158, 11, 0.9)';
+      ctx.arc(midX, midY, 13, 0, Math.PI * 2);
+      ctx.fillStyle = '#1e1b4b';
       ctx.fill();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2;
       ctx.stroke();
 
-      ctx.fillStyle = '#1e1b4b';
-      ctx.font = 'bold 10px sans-serif';
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 12px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('⚡', midX, midY);
@@ -393,40 +536,104 @@ class GraphRenderer {
       ctx.arc(px, py, p.size, 0, Math.PI * 2);
       ctx.fillStyle = p.color;
       ctx.shadowColor = p.color;
-      ctx.shadowBlur = 10;
+      ctx.shadowBlur = 12;
       ctx.fill();
       ctx.restore();
     });
 
-    // 4. Draw Nodes
+    // 4. Draw Nodes and Crisp Label Pills
     this.nodes.forEach(n => {
       const isSelected = this.selectedNode && this.selectedNode.id === n.id;
       const isHover = this.hoverNode && this.hoverNode.id === n.id;
 
       ctx.save();
+
+      // Node Body Circle
       ctx.beginPath();
       ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
-
-      // Node background & glowing border
       ctx.fillStyle = isSelected ? '#00d4ff' : (isHover ? '#38bdf8' : n.baseColor);
       ctx.shadowColor = isSelected ? '#00d4ff' : (isHover ? '#38bdf8' : n.baseColor);
-      ctx.shadowBlur = isSelected ? 22 : (isHover ? 16 : 8);
+      ctx.shadowBlur = isSelected ? 26 : (isHover ? 18 : 10);
       ctx.fill();
 
-      // White inner ring
-      ctx.strokeStyle = isSelected ? '#ffffff' : 'rgba(255, 255, 255, 0.4)';
-      ctx.lineWidth = isSelected ? 3 : 1.5;
+      // White/Glowing border ring
+      ctx.strokeStyle = isSelected ? '#ffffff' : (n.pinned ? '#f59e0b' : 'rgba(255, 255, 255, 0.4)');
+      ctx.lineWidth = isSelected ? 3.5 : (n.pinned ? 2.5 : 1.5);
       ctx.stroke();
 
-      // Text label below node
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = `${Math.max(10, Math.min(13, n.radius * 0.65))}px Vazirmatn, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
+      // If node has children: Draw Expand/Collapse Indicator Badge on top of node!
+      if (n.hasChildren) {
+        ctx.beginPath();
+        ctx.arc(n.x + n.radius * 0.7, n.y - n.radius * 0.7, 10, 0, Math.PI * 2);
+        ctx.fillStyle = n.isExpanded ? '#ef4444' : '#10b981';
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = n.isExpanded ? '#ef4444' : '#10b981';
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
 
-      const shortTitle = n.title.length > 24 ? n.title.substring(0, 22) + '...' : n.title;
-      ctx.fillText(shortTitle, n.x, n.y + n.radius + 5);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowBlur = 0;
+        ctx.fillText(n.isExpanded ? '−' : '+', n.x + n.radius * 0.7, n.y - n.radius * 0.7);
+      }
+
+      // Draw Pinned Indicator Icon (if pinned by user)
+      if (n.pinned && n.type !== 'root') {
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('📌', n.x - n.radius * 0.7, n.y - n.radius * 0.7);
+      }
+
+      // Draw Node Label with Dark Pill Background (to guarantee 100% legibility!)
+      const shortTitle = n.title.length > 28 ? n.title.substring(0, 26) + '...' : n.title;
+      const fontSize = Math.max(11, Math.min(14, n.radius * 0.55));
+      ctx.font = `600 ${fontSize}px 'Vazirmatn', sans-serif`;
+
+      const textMetrics = ctx.measureText(shortTitle);
+      const textWidth = textMetrics.width;
+      const pillHeight = fontSize + 10;
+      const pillWidth = textWidth + 16;
+      const pillX = n.x - pillWidth / 2;
+      const pillY = n.y + n.radius + 8;
+
+      // Rounded pill background
+      ctx.beginPath();
+      ctx.roundRect(pillX, pillY, pillWidth, pillHeight, 6);
+      ctx.fillStyle = isSelected ? 'rgba(14, 165, 233, 0.95)' : (isHover ? 'rgba(30, 41, 59, 0.95)' : 'rgba(15, 23, 42, 0.88)');
+      ctx.fill();
+      ctx.strokeStyle = isSelected ? '#38bdf8' : (isHover ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.12)');
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Label Text
+      ctx.fillStyle = '#f8fafc';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(shortTitle, n.x, pillY + pillHeight / 2);
+
+      // Draw Child Count Pill if collapsed with children
+      if (n.hasChildren && !n.isExpanded) {
+        const countText = `+${n.childCount} شاخه`;
+        ctx.font = `bold 10px 'Vazirmatn', sans-serif`;
+        const countMetrics = ctx.measureText(countText);
+        const countPillW = countMetrics.width + 10;
+        const countPillY = pillY + pillHeight + 4;
+
+        ctx.beginPath();
+        ctx.roundRect(n.x - countPillW / 2, countPillY, countPillW, 16, 4);
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(16, 185, 129, 0.5)';
+        ctx.stroke();
+
+        ctx.fillStyle = '#34d399';
+        ctx.fillText(countText, n.x, countPillY + 8);
+      }
 
       ctx.restore();
     });
@@ -441,15 +648,15 @@ class GraphRenderer {
       const clickY = e.clientY - rect.top;
       const worldPos = this.screenToWorld(clickX, clickY);
 
-      // Check if clicked a node
+      this.dragMoved = false;
       const clicked = this.getNodeAt(worldPos.x, worldPos.y);
+
       if (clicked) {
         this.isDragging = true;
         this.dragNode = clicked;
         this.selectedNode = clicked;
-        if (typeof this.onNodeSelect === 'function') {
-          this.onNodeSelect(clicked.rawNode);
-        }
+        this.startX = worldPos.x;
+        this.startY = worldPos.y;
       } else {
         this.isPanning = true;
         this.startX = clickX - this.offsetX;
@@ -464,10 +671,16 @@ class GraphRenderer {
       const worldPos = this.screenToWorld(mouseX, mouseY);
 
       if (this.isDragging && this.dragNode) {
+        const dx = worldPos.x - this.startX;
+        const dy = worldPos.y - this.startY;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+          this.dragMoved = true;
+        }
         this.dragNode.x = worldPos.x;
         this.dragNode.y = worldPos.y;
         this.dragNode.vx = 0;
         this.dragNode.vy = 0;
+        this.dragNode.pinned = true; // Pin node to user's dropped location!
       } else if (this.isPanning) {
         this.offsetX = mouseX - this.startX;
         this.offsetY = mouseY - this.startY;
@@ -481,16 +694,39 @@ class GraphRenderer {
     });
 
     window.addEventListener('mouseup', () => {
+      if (this.isDragging && this.dragNode) {
+        // If it was a quick click without dragging, toggle node expansion or select node
+        if (!this.dragMoved) {
+          if (this.dragNode.hasChildren) {
+            this.toggleNodeExpansion(this.dragNode.id);
+          }
+          if (typeof this.onNodeSelect === 'function') {
+            this.onNodeSelect(this.dragNode.rawNode);
+          }
+        }
+      }
       this.isDragging = false;
       this.isPanning = false;
       this.dragNode = null;
       if (this.canvas) this.canvas.style.cursor = 'default';
     });
 
+    // Double click to open Inspector
+    this.canvas.addEventListener('dblclick', (e) => {
+      const rect = this.canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      const worldPos = this.screenToWorld(clickX, clickY);
+      const clicked = this.getNodeAt(worldPos.x, worldPos.y);
+      if (clicked && typeof this.onNodeSelect === 'function') {
+        this.onNodeSelect(clicked.rawNode);
+      }
+    });
+
     this.canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-      this.scale = Math.min(2.5, Math.max(0.25, this.scale * zoomFactor));
+      const zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
+      this.scale = Math.min(3.0, Math.max(0.15, this.scale * zoomFactor));
     }, { passive: false });
   }
 
@@ -508,7 +744,11 @@ class GraphRenderer {
       const n = this.nodes[i];
       const dx = wx - n.x;
       const dy = wy - n.y;
-      if (dx * dx + dy * dy <= n.radius * n.radius) {
+      // Hit test includes the node body and label pill
+      if (dx * dx + dy * dy <= (n.radius + 10) * (n.radius + 10)) {
+        return n;
+      }
+      if (Math.abs(dx) <= 90 && dy >= n.radius && dy <= n.radius + 35) {
         return n;
       }
     }
@@ -516,19 +756,48 @@ class GraphRenderer {
   }
 
   focusNode(nodeId) {
-    const n = this.nodeMap.get(nodeId);
-    if (n) {
-      this.selectedNode = n;
-      this.offsetX = -n.x * this.scale;
-      this.offsetY = -n.y * this.scale;
+    // Ensure node is expanded and visible in graph
+    let current = this.docManager.getNodeById(nodeId);
+    while (current && current.parentId) {
+      this.expandedNodeIds.add(current.parentId);
+      current = this.docManager.getNodeById(current.parentId);
     }
+    this.initGraphData();
+
+    setTimeout(() => {
+      const n = this.nodeMap.get(nodeId);
+      if (n) {
+        this.selectedNode = n;
+        this.offsetX = -n.x * this.scale;
+        this.offsetY = -n.y * this.scale;
+      }
+    }, 50);
+  }
+
+  unpinAllNodes() {
+    this.nodes.forEach(n => {
+      if (n.type !== 'root') n.pinned = false;
+    });
+    this.physicsRunning = true;
+  }
+
+  setSpacingMultiplier(multiplier) {
+    this.spacingMultiplier = Math.max(0.8, Math.min(3.5, multiplier));
+    this.initGraphData();
+  }
+
+  togglePhysics() {
+    this.physicsRunning = !this.physicsRunning;
+    return this.physicsRunning;
   }
 
   resetView() {
-    this.scale = 0.9;
+    this.scale = 0.85;
     this.offsetX = 0;
     this.offsetY = 0;
     this.selectedNode = null;
+    this.unpinAllNodes();
+    this.initGraphData();
   }
 }
 

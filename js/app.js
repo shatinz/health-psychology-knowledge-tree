@@ -143,6 +143,32 @@ document.addEventListener('DOMContentLoaded', () => {
   btnCollapseAll?.addEventListener('click', () => treeRenderer.collapseToChapters());
   btnResetGraph?.addEventListener('click', () => graphRenderer.resetView());
 
+  // Graph Floating Toolbar Controls
+  const graphLevelSelect = document.getElementById('graph-level-select');
+  const graphSpacingSlider = document.getElementById('graph-spacing-slider');
+  const btnTogglePhysics = document.getElementById('btn-graph-toggle-physics');
+  const btnUnpinAll = document.getElementById('btn-graph-unpin-all');
+  const physicsIcon = document.getElementById('physics-icon');
+  const physicsText = document.getElementById('physics-text');
+
+  graphLevelSelect?.addEventListener('change', (e) => {
+    graphRenderer.setExpansionLevel(e.target.value);
+  });
+
+  graphSpacingSlider?.addEventListener('input', (e) => {
+    graphRenderer.setSpacingMultiplier(parseFloat(e.target.value));
+  });
+
+  btnTogglePhysics?.addEventListener('click', () => {
+    const isRunning = graphRenderer.togglePhysics();
+    if (physicsIcon) physicsIcon.textContent = isRunning ? '⏸️' : '▶️';
+    if (physicsText) physicsText.textContent = isRunning ? 'توقف فیزیک' : 'ادامه فیزیک';
+  });
+
+  btnUnpinAll?.addEventListener('click', () => {
+    graphRenderer.unpinAllNodes();
+  });
+
   // Search Engine Integration
   function performSearch() {
     const q = searchInput?.value || '';
