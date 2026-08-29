@@ -20,6 +20,9 @@ class DocumentManager {
     if (window.DOC_CHILD_PSYCHOPATHOLOGY) {
       this.registerDocument(window.DOC_CHILD_PSYCHOPATHOLOGY);
     }
+    if (window.DOC_ADDICTION_PSYCHOLOGY) {
+      this.registerDocument(window.DOC_ADDICTION_PSYCHOLOGY);
+    }
   }
 
   registerDocument(doc) {

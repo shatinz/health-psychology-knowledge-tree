@@ -202,6 +202,50 @@ class StudyPartnerEngine {
         isOnline: true,
         feynmanStyle: 'مرور تطبیقی ساید‌بای‌ساید تفاوت‌های تشخیصی DSM-5',
         sampleExplanation: 'پروتکل زنگ و تشک (Bell and Pad) توسط ماورر بر پایه شرطی‌سازی کلاسیک ابداع شد که در آن پر شدن مثانه محرک شرطی و زنگ محرک غیرشرطی است.'
+      },
+      {
+        id: 'peer_farzad',
+        name: 'فرزاد اسماعیلی',
+        avatar: '👨‍🔬',
+        role: 'رتبه ۱۲ کنکور ارشد و پژوهشگر کلینیک‌های بازتوانی TC',
+        targetExam: 'کنکور کارشناسی ارشد روانشناسی',
+        docId: 'doc_addiction_psychology',
+        docTitle: 'روانشناسی اعتیاد',
+        score: 95,
+        masteredChapters: [
+          { id: 'addict_ch6', title: 'فصل ۶: مدل جامعه درمان‌مدار (TC) و مراحل اقامت', weight: 'ضریب ۳' },
+          { id: 'addict_ch3', title: 'فصل ۳: داروشناسی اوپیوئیدها و محرک‌های شیشه', weight: 'ضریب ۳' }
+        ],
+        weakChapters: [
+          { id: 'addict_ch7', title: 'فصل ۷: ابعاد سرشت و منش کلونینجر', weight: 'ضریب ۳' },
+          { id: 'addict_ch8', title: 'فصل ۸: پویایی‌های خانواده و هم‌وابستگی', weight: 'ضریب ۳' }
+        ],
+        studyPace: '۳.۵ ساعت در روز',
+        isOnline: true,
+        feynmanStyle: 'تدریس ساختاریافته بر اساس مراحل بازتوانی TC و داروشناسی بالینی',
+        sampleExplanation: 'جامعه درمان‌مدار (TC) بر خودیاری و یادگیری اجتماعی استوار است؛ افراد در سه مرحله Junior، Intermediate و Senior وظایف شغلی و جلسات رویارویی را تجربه می‌کنند.'
+      },
+      {
+        id: 'peer_mahsa',
+        name: 'مهسا شمس',
+        avatar: '👩‍🏫',
+        role: 'دانشجوی ارشد روانشناسی و مشاور خانواده اعتیاد',
+        targetExam: 'کنکور کارشناسی ارشد روانشناسی',
+        docId: 'doc_addiction_psychology',
+        docTitle: 'روانشناسی اعتیاد',
+        score: 91,
+        masteredChapters: [
+          { id: 'addict_ch8', title: 'فصل ۸: خانواده، نقش‌ها و هم‌وابستگی (Codependency)', weight: 'ضریب ۳' },
+          { id: 'addict_ch9', title: 'فصل ۹: راهبردهای کاهش آسیب و پیشگیری از HIV', weight: 'ضریب ۳' }
+        ],
+        weakChapters: [
+          { id: 'addict_ch5', title: 'فصل ۵: درمان‌های پزشکی، متادون و بوپرنورفین', weight: 'ضریب ۳' },
+          { id: 'addict_ch6', title: 'فصل ۶: ارکان جامعه درمان‌مدار TC', weight: 'ضریب ۳' }
+        ],
+        studyPace: '۳ ساعت در روز',
+        isOnline: true,
+        feynmanStyle: 'تحلیل سیستمی نقش‌های ناخودآگاه خانواده (قهرمان، قربانی، دلقک)',
+        sampleExplanation: 'در هم‌وابستگی، همسر معتاد با کنترل‌گری افراطی و فداکاری کاذب ناخواسته به تداوم اعتیاد کمک می‌کند و در نقش‌های خانوادگی فرزندان نقش قهرمان یا بز طلیعه را می‌پذیرند.'
       }
     ];
   }
@@ -370,6 +414,9 @@ class StudyPartnerEngine {
               </button>
               <button onclick="window.omniApp.studyPartnerEngine.setDocFilter('doc_health_psychology')" class="px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer ${this.activeFilterDocId === 'doc_health_psychology' ? 'bg-purple-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:text-white'}">
                 📖 روانشناسی سلامت
+              </button>
+              <button onclick="window.omniApp.studyPartnerEngine.setDocFilter('doc_addiction_psychology')" class="px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer ${this.activeFilterDocId === 'doc_addiction_psychology' ? 'bg-purple-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:text-white'}">
+                📖 روانشناسی اعتیاد
               </button>
             </div>
           </div>
