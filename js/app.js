@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const viewMatrixBtn = document.getElementById('btn-view-matrix');
   const viewTheoristsBtn = document.getElementById('btn-view-theorists');
   const viewQuizBtn = document.getElementById('btn-view-quiz');
+  const viewAnkiBtn = document.getElementById('btn-view-anki');
   const viewPartnersBtn = document.getElementById('btn-view-partners');
   const viewDocHubBtn = document.getElementById('btn-view-dochub');
 
@@ -26,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const viewMatrixContainer = document.getElementById('view-matrix');
   const viewTheoristsContainer = document.getElementById('view-theorists');
   const viewQuizContainer = document.getElementById('view-quiz');
+  const viewAnkiContainer = document.getElementById('view-anki');
   const viewPartnersContainer = document.getElementById('view-partners');
   const viewDocHubContainer = document.getElementById('view-dochub');
 
@@ -151,6 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const node = docManager.getNodeById(nodeId);
     if (node) openInspector(node);
   });
+  const ankiEngine = new window.AnkiEngine();
   const studyPartnerEngine = new window.StudyPartnerEngine(docManager);
 
   // Initialize Document Selector
@@ -186,8 +189,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Switch View
   function switchView(viewName) {
     activeView = viewName;
-    [viewTreeBtn, viewGraphBtn, viewMatrixBtn, viewTheoristsBtn, viewQuizBtn, viewPartnersBtn, viewDocHubBtn].forEach(b => b?.classList.remove('active'));
-    [viewTreeContainer, viewGraphContainer, viewMatrixContainer, viewTheoristsContainer, viewQuizContainer, viewPartnersContainer, viewDocHubContainer].forEach(c => c?.classList.add('hidden'));
+    [viewTreeBtn, viewGraphBtn, viewMatrixBtn, viewTheoristsBtn, viewQuizBtn, viewAnkiBtn, viewPartnersBtn, viewDocHubBtn].forEach(b => b?.classList.remove('active'));
+    [viewTreeContainer, viewGraphContainer, viewMatrixContainer, viewTheoristsContainer, viewQuizContainer, viewAnkiContainer, viewPartnersContainer, viewDocHubContainer].forEach(c => c?.classList.add('hidden'));
 
     if (viewName === 'tree') {
       viewTreeBtn?.classList.add('active');
@@ -210,6 +213,10 @@ document.addEventListener('DOMContentLoaded', () => {
       viewQuizBtn?.classList.add('active');
       viewQuizContainer?.classList.remove('hidden');
       quizEngine.render();
+    } else if (viewName === 'anki') {
+      viewAnkiBtn?.classList.add('active');
+      viewAnkiContainer?.classList.remove('hidden');
+      ankiEngine.render('view-anki');
     } else if (viewName === 'partners') {
       viewPartnersBtn?.classList.add('active');
       viewPartnersContainer?.classList.remove('hidden');
@@ -227,6 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
   viewMatrixBtn?.addEventListener('click', () => switchView('matrix'));
   viewTheoristsBtn?.addEventListener('click', () => switchView('theorists'));
   viewQuizBtn?.addEventListener('click', () => switchView('quiz'));
+  viewAnkiBtn?.addEventListener('click', () => switchView('anki'));
   viewPartnersBtn?.addEventListener('click', () => switchView('partners'));
   viewDocHubBtn?.addEventListener('click', () => switchView('doc_hub'));
 
@@ -1011,6 +1019,7 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     quizEngine: quizEngine,
     feynmanEngine: feynmanEngine,
+    ankiEngine: ankiEngine,
     studyPartnerEngine: studyPartnerEngine,
     treeRenderer: treeRenderer,
     startQuizForNode: (nodeId) => {
